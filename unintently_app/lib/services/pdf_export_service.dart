@@ -2,37 +2,35 @@ import 'package:flutter/services.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
-import '../models/assignment_model.dart';
+import '../models/assignment_doc.dart';
 
 class PdfExportService {
-  /// Generate a print-ready PDF document with background paper texture and handwriting font
-  static Future<Uint8List> generatePdf(AssignmentModel assignment) async {
+  static Future<Uint8List> generatePdf(AssignmentDoc doc) async {
     final pdf = pw.Document();
 
-    // Load handwriting font
     pw.Font handwritingFont;
     try {
-      handwritingFont = await fontFromAssetBundle('assets/fonts/${assignment.fontFamily}.otf');
+      handwritingFont = await fontFromAssetBundle('assets/fonts/${doc.fontFamily}.otf');
     } catch (_) {
       try {
-        handwritingFont = await fontFromAssetBundle('assets/fonts/${assignment.fontFamily}.ttf');
+        handwritingFont = await fontFromAssetBundle('assets/fonts/${doc.fontFamily}.ttf');
       } catch (_) {
         handwritingFont = await fontFromAssetBundle('assets/fonts/intentlyR1.otf');
       }
     }
 
-    // Load background image bytes
     pw.MemoryImage? paperImage;
     try {
-      final ByteData data = await rootBundle.load(assignment.paperAsset);
+      final ByteData data = await rootBundle.load(doc.paperAsset);
       paperImage = pw.MemoryImage(data.buffer.asUint8List());
     } catch (_) {
       paperImage = null;
     }
 
-    // Color conversion
-    final inkColor = PdfColor.fromInt(assignment.fontColorValue);
+    final qColor = PdfColor.fromInt(doc.questionColorValue);
+    final aColor = PdfColor.fromInt(doc.answerColorValue);
 
+    // Render pages
     pdf.addPage(
       pw.Page(
         pageFormat: PdfPageFormat.a4,
@@ -45,37 +43,68 @@ class PdfExportService {
                   child: pw.Image(paperImage, fit: pw.BoxFit.cover),
                 ),
               pw.Padding(
-                padding: pw.EdgeInsets.only(
-                  top: assignment.topMargin,
-                  left: assignment.leftMargin,
-                  right: assignment.rightMargin,
-                  bottom: assignment.bottomMargin,
-                ),
+                padding: const pw.EdgeInsets.only(top: 55, left: 45, right: 35, bottom: 35),
                 child: pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
-                    if (assignment.heading.isNotEmpty) ...[
-                      pw.Text(
-                        assignment.heading,
-                        style: pw.TextStyle(
-                          font: handwritingFont,
-                          fontSize: assignment.fontSize + 6,
-                          fontWeight: pw.FontWeight.bold,
-                          color: inkColor,
+                    if (doc.heading.isNotEmpty) ...[
+                      pw.Center(
+                        child: pw.Text(
+                          doc.heading,
+                          style: pw.TextStyle(
+                            font: handwritingFont,
+                            fontSize: doc.fontSize + 4,
+                            fontWeight: pw.FontWeight.bold,
+                            color: qColor,
+                          ),
                         ),
                       ),
-                      pw.SizedBox(height: 12),
+                      pw.SizedBox(height: 14),
                     ],
-                    pw.Text(
-                      assignment.content,
-                      style: pw.TextStyle(
-                        font: handwritingFont,
-                        fontSize: assignment.fontSize,
-                        lineSpacing: assignment.lineSpacing * 2.0,
-                        letterSpacing: assignment.letterSpacing,
-                        color: inkColor,
+
+                    if (doc.docType == 'general') ...[
+                      pw.Text(
+                        doc.generalContent,
+                        style: pw.TextStyle(
+                          font: handwritingFont,
+                          fontSize: doc.fontSize,
+                          lineSpacing: doc.lineSpacing * 2.0,
+                          color: aColor,
+                        ),
                       ),
-                    ),
+                    ] else ...[
+                      // Q&A List
+                      ...List.generate(doc.items.length, (idx) {
+                        final item = doc.items[idx];
+                        return pw.Padding(
+                          padding: const pw.EdgeInsets.only(bottom: 12),
+                          child: pw.Column(
+                            crossAxisAlignment: pw.CrossAxisAlignment.start,
+                            children: [
+                              pw.Text(
+                                'Q${idx + 1}. ${item.question}',
+                                style: pw.TextStyle(
+                                  font: handwritingFont,
+                                  fontSize: doc.fontSize,
+                                  fontWeight: pw.FontWeight.bold,
+                                  color: qColor,
+                                ),
+                              ),
+                              pw.SizedBox(height: 4),
+                              pw.Text(
+                                'Ans. ${item.answer}',
+                                style: pw.TextStyle(
+                                  font: handwritingFont,
+                                  fontSize: doc.fontSize,
+                                  lineSpacing: doc.lineSpacing * 2.0,
+                                  color: aColor,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
+                    ],
                   ],
                 ),
               ),
@@ -88,12 +117,11 @@ class PdfExportService {
     return pdf.save();
   }
 
-  /// Trigger system print or save PDF dialog
-  static Future<void> printOrSharePdf(AssignmentModel assignment) async {
-    final bytes = await generatePdf(assignment);
+  static Future<void> printOrSharePdf(AssignmentDoc doc) async {
+    final bytes = await generatePdf(doc);
     await Printing.layoutPdf(
       onLayout: (PdfPageFormat format) async => bytes,
-      name: '${assignment.title.replaceAll(RegExp(r'\s+'), '_')}.pdf',
+      name: '${doc.title.replaceAll(RegExp(r'\s+'), '_')}.pdf',
     );
   }
 }

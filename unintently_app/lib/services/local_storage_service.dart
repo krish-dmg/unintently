@@ -1,56 +1,47 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../models/assignment_model.dart';
+import '../models/assignment_doc.dart';
 
 class LocalStorageService {
-  static const String _assignmentsKey = 'unintently_assignments_v2';
+  static const String _assignmentsKey = 'unintently_docs_v2';
 
-  /// Save or update an assignment in local storage
-  static Future<void> saveAssignment(AssignmentModel assignment) async {
+  static Future<void> saveDoc(AssignmentDoc doc) async {
     final prefs = await SharedPreferences.getInstance();
-    final List<AssignmentModel> current = await getAssignments();
-
-    final index = current.indexWhere((item) => item.id == assignment.id);
-    if (index >= 0) {
-      current[index] = assignment;
+    final List<AssignmentDoc> list = await getDocs();
+    final idx = list.indexWhere((d) => d.id == doc.id);
+    if (idx >= 0) {
+      list[idx] = doc;
     } else {
-      current.insert(0, assignment);
+      list.insert(0, doc);
     }
-
-    final rawList = current.map((a) => a.toMap()).toList();
-    await prefs.setString(_assignmentsKey, json.encode(rawList));
+    final raw = list.map((d) => d.toMap()).toList();
+    await prefs.setString(_assignmentsKey, json.encode(raw));
   }
 
-  /// Get all assignments sorted by most recent
-  static Future<List<AssignmentModel>> getAssignments() async {
+  static Future<List<AssignmentDoc>> getDocs() async {
     final prefs = await SharedPreferences.getInstance();
     final jsonStr = prefs.getString(_assignmentsKey);
-    if (jsonStr == null || jsonStr.isEmpty) {
-      return [];
-    }
-
+    if (jsonStr == null || jsonStr.isEmpty) return [];
     try {
       final List<dynamic> decoded = json.decode(jsonStr);
-      return decoded.map((m) => AssignmentModel.fromMap(m as Map<String, dynamic>)).toList();
+      return decoded.map((m) => AssignmentDoc.fromMap(m as Map<String, dynamic>)).toList();
     } catch (_) {
       return [];
     }
   }
 
-  /// Delete an assignment by ID
-  static Future<void> deleteAssignment(String id) async {
+  static Future<void> deleteDoc(String id) async {
     final prefs = await SharedPreferences.getInstance();
-    final List<AssignmentModel> current = await getAssignments();
-    current.removeWhere((item) => item.id == id);
-    final rawList = current.map((a) => a.toMap()).toList();
-    await prefs.setString(_assignmentsKey, json.encode(rawList));
+    final List<AssignmentDoc> list = await getDocs();
+    list.removeWhere((d) => d.id == id);
+    final raw = list.map((d) => d.toMap()).toList();
+    await prefs.setString(_assignmentsKey, json.encode(raw));
   }
 
-  /// Get single assignment by ID
-  static Future<AssignmentModel?> getAssignmentById(String id) async {
-    final list = await getAssignments();
+  static Future<AssignmentDoc?> getDocById(String id) async {
+    final list = await getDocs();
     try {
-      return list.firstWhere((item) => item.id == id);
+      return list.firstWhere((d) => d.id == id);
     } catch (_) {
       return null;
     }
