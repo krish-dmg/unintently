@@ -233,13 +233,36 @@ export default {
       background: #334155;
       color: #f8fafc;
     }
-    .btn-secondary:hover {
-      background: #475569;
+    .logo-wrap {
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: center;
+    }
+    .logo-wrap svg {
+      width: 72px;
+      height: 72px;
+      border-radius: 18px;
+      box-shadow: 0 4px 14px rgba(0, 87, 210, 0.35);
     }
   </style>
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      // Automatic deep link launch
+      var appUrl = "unintently://assignment?code=" + encodeURIComponent("${escapeHtml(code)}");
+      window.location.href = appUrl;
+    });
+  </script>
 </head>
 <body>
   <div class="card">
+    <div class="logo-wrap">
+      <svg viewBox="0 0 512 512" width="72" height="72">
+        <rect width="512" height="512" rx="116" fill="#0057D2"/>
+        <path d="M 148 136 L 204 136 L 204 280 C 204 314, 226 334, 256 334 C 286 334, 308 314, 308 280 L 308 136 L 364 136 L 364 280 C 364 354, 318 394, 256 394 C 194 394, 148 354, 148 280 Z" fill="#FFFFFF"/>
+        <circle cx="256" cy="358" r="7.5" fill="#0057D2"/>
+        <rect x="253.5" y="362" width="5" height="34" fill="#0057D2"/>
+      </svg>
+    </div>
     <div class="badge">Unintently v2</div>
     <h1>${escapeHtml(title)}</h1>
     <p>Your handwritten assignment is ready to open on mobile.</p>

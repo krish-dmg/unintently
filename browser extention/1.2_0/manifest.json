@@ -48,5 +48,11 @@
       ],
       "run_at": "document_idle"
     }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["logo.png"],
+      "matches": ["https://chatgpt.com/*", "https://chat.openai.com/*"]
+    }
   ]
 }

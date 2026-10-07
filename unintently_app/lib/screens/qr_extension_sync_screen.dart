@@ -5,7 +5,6 @@ import 'package:http/http.dart' as http;
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../models/assignment_doc.dart';
 import '../services/local_storage_service.dart';
-import 'choose_page_screen.dart';
 import 'create_general_document_screen.dart';
 import 'create_qa_assignment_screen.dart';
 
@@ -85,28 +84,71 @@ class _QrExtensionSyncScreenState extends State<QrExtensionSyncScreen>
     try {
       AssignmentDoc? doc;
 
-      // 1. Check if input is a URL with payload parameter
-      if (text.contains('data=')) {
-        final uri = Uri.tryParse(text);
-        if (uri != null && uri.queryParameters.containsKey('data')) {
-          text = Uri.decodeComponent(uri.queryParameters['data']!);
-        }
+      final bool isSyncUrlOrCode = text.startsWith('UNIN-') ||
+          text.contains('unintently') ||
+          text.contains('intently') ||
+          text.startsWith('http://') ||
+          text.startsWith('https://');
+
+      // 1. Direct JSON check
+      if (text.startsWith('{')) {
+        try {
+          doc = AssignmentDoc.fromJson(text);
+        } catch (_) {}
       }
 
-      // 2. Check if input is base64 encoded
-      if (!text.startsWith('{') && text.length > 20 && !text.contains(' ')) {
+      // 2. Base64 payload check
+      if (doc == null && !text.startsWith('{') && text.length > 20 && !text.contains(' ') && !text.startsWith('http')) {
         try {
           final decoded = utf8.decode(base64.decode(text));
           if (decoded.startsWith('{')) {
-            text = decoded;
+            doc = AssignmentDoc.fromJson(decoded);
           }
         } catch (_) {}
       }
 
-      // 3. Check for Firebase Dynamic Link (intently.page.link or unintently.page.link)
-      if (text.contains('.page.link') || (text.startsWith('http') && !text.contains('/assignments/'))) {
-        String? assignmentId;
+      // 3. Extract Sync Code (UNIN-XXXXXX)
+      String? syncCode;
+      if (text.startsWith('UNIN-')) {
+        syncCode = text.split('?').first.trim();
+      } else if (text.contains('code=')) {
+        final uri = Uri.tryParse(text);
+        syncCode = uri?.queryParameters['code'];
+      } else if (text.contains('/a/') || text.contains('/assignments/')) {
+        final uri = Uri.tryParse(text);
+        if (uri != null && uri.pathSegments.isNotEmpty) {
+          syncCode = uri.pathSegments.last;
+        }
+      }
 
+      // 4. Fetch from Cloudflare Worker
+      if (doc == null && syncCode != null && syncCode.isNotEmpty) {
+        final candidateUrls = [
+          'https://unintently-backend.brksmartkraft.workers.dev/assignments/$syncCode',
+          'http://10.0.2.2:8787/assignments/$syncCode',
+          'http://localhost:8787/assignments/$syncCode',
+        ];
+
+        for (final urlStr in candidateUrls) {
+          try {
+            final res = await http.get(Uri.parse(urlStr)).timeout(const Duration(seconds: 12));
+            if (res.statusCode == 200) {
+              final body = json.decode(res.body);
+              if (body is Map && body.containsKey('assignment')) {
+                final aMap = body['assignment'];
+                if (aMap is Map) {
+                  doc = AssignmentDoc.fromMap(Map<String, dynamic>.from(aMap));
+                }
+                break;
+              }
+            }
+          } catch (_) {}
+        }
+      }
+
+      // 5. Firebase Dynamic Link / Firestore fallback
+      if (doc == null && (text.contains('.page.link') || text.contains('assignmentId='))) {
+        String? assignmentId;
         final parsedUri = Uri.tryParse(text);
         if (parsedUri != null && parsedUri.queryParameters.containsKey('assignmentId')) {
           assignmentId = parsedUri.queryParameters['assignmentId'];
@@ -114,7 +156,7 @@ class _QrExtensionSyncScreenState extends State<QrExtensionSyncScreen>
           try {
             final client = http.Client();
             final request = http.Request('GET', Uri.parse(text))..followRedirects = false;
-            final response = await client.send(request).timeout(const Duration(seconds: 5));
+            final response = await client.send(request).timeout(const Duration(seconds: 6));
             final location = response.headers['location'];
             if (location != null && location.isNotEmpty) {
               final targetUri = Uri.tryParse(location);
@@ -128,53 +170,29 @@ class _QrExtensionSyncScreenState extends State<QrExtensionSyncScreen>
         }
       }
 
-      // 4. Check if input is a raw Firestore assignment ID (e.g. kTRgsgj6Dv5Iqqm7f8SZ)
-      if (doc == null && !text.startsWith('{') && RegExp(r'^[A-Za-z0-9_-]{16,28}$').hasMatch(text)) {
+      // 6. Raw Firestore assignment ID (e.g. kTRgsgj6Dv5Iqqm7f8SZ)
+      if (doc == null && !isSyncUrlOrCode && RegExp(r'^[A-Za-z0-9_-]{16,28}$').hasMatch(text)) {
         doc = await _fetchFromFirestore(text);
       }
 
-      // 5. Check if input is a sync code or Cloudflare Worker URL
-      if (doc == null && !text.startsWith('{') && (text.startsWith('UNIN-') || text.startsWith('http') || text.startsWith('unintently://'))) {
-        String code = text;
-        if (text.contains('code=')) {
-          final uri = Uri.tryParse(text);
-          code = uri?.queryParameters['code'] ?? code;
-        } else if (text.startsWith('http')) {
-          final uri = Uri.tryParse(text);
-          code = uri?.pathSegments.isNotEmpty == true ? uri!.pathSegments.last : text;
+      // 7. If this was a sync link/code and fetching failed, DO NOT dump the URL as notes!
+      if (doc == null && isSyncUrlOrCode) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                syncCode != null
+                    ? 'Could not load assignment $syncCode. Please check your internet connection.'
+                    : 'Could not load assignment from link. Please verify internet connection.',
+              ),
+              backgroundColor: const Color(0xFFDC2626),
+            ),
+          );
         }
-
-        final candidateUrls = [
-          'https://unintently-backend.brksmartkraft.workers.dev/assignments/$code',
-          'http://10.0.2.2:8787/assignments/$code',
-          'http://localhost:8787/assignments/$code',
-        ];
-
-        for (final urlStr in candidateUrls) {
-          try {
-            final res = await http.get(Uri.parse(urlStr)).timeout(const Duration(seconds: 4));
-            if (res.statusCode == 200) {
-              final body = json.decode(res.body);
-              if (body is Map && body.containsKey('assignment')) {
-                final aMap = body['assignment'];
-                if (aMap is Map<String, dynamic>) {
-                  doc = AssignmentDoc.fromMap(aMap);
-                } else if (aMap is Map) {
-                  doc = AssignmentDoc.fromMap(Map<String, dynamic>.from(aMap));
-                }
-                break;
-              }
-            }
-          } catch (_) {}
-        }
+        return;
       }
 
-      // 6. Parse into AssignmentDoc if JSON
-      if (doc == null && text.startsWith('{')) {
-        doc = AssignmentDoc.fromJson(text);
-      }
-
-      // 7. Fallback: parse as general document / notes
+      // 8. Fallback ONLY for plain text notes typed or pasted by the user
       doc ??= AssignmentDoc(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         title: 'Imported Notes',
@@ -187,27 +205,42 @@ class _QrExtensionSyncScreenState extends State<QrExtensionSyncScreen>
         paperAsset: 'assets/images/ruled1.jpg',
       );
 
-      await LocalStorageService.saveDoc(doc);
-
-      if (mounted) {
-        _showSuccessSheet(doc);
+      // Harmonize general content and QA items
+      if (doc.generalContent.trim().isEmpty && doc.items.isNotEmpty) {
+        doc.generalContent = doc.items.map((i) => 'Q: ${i.question}\n\nA: ${i.answer}').join('\n\n');
+      } else if (doc.items.isEmpty && doc.generalContent.trim().isNotEmpty) {
+        doc.items = [QAItem(question: doc.heading.isNotEmpty ? doc.heading : doc.title, answer: doc.generalContent)];
       }
-    } catch (_) {
-      final doc = AssignmentDoc(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        title: 'ChatGPT Notes',
-        docType: 'general',
-        heading: 'Notes',
-        generalContent: rawInput,
-        fontFamily: 'intentlyR1',
-        fontSize: 17.0,
-        lineSpacing: 1.6,
-        paperAsset: 'assets/images/ruled1.jpg',
-      );
+
       await LocalStorageService.saveDoc(doc);
 
       if (mounted) {
-        _showSuccessSheet(doc);
+        HapticFeedback.lightImpact();
+        // Open the editor directly for instant flow
+        if (doc.docType == 'general') {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => CreateGeneralDocumentScreen(initialDoc: doc),
+            ),
+          );
+        } else {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => CreateQAAssignmentScreen(initialDoc: doc),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error processing scanned code: $e'),
+            backgroundColor: const Color(0xFFDC2626),
+          ),
+        );
       }
     } finally {
       if (mounted) {
@@ -268,131 +301,6 @@ class _QrExtensionSyncScreenState extends State<QrExtensionSyncScreen>
       }
     } catch (_) {}
     return null;
-  }
-
-  void _showSuccessSheet(AssignmentDoc doc) {
-    showModalBottomSheet(
-      context: context,
-      isDismissible: false,
-      enableDrag: false,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) {
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 52,
-                height: 52,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFDCFCE7),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.check_circle_outline,
-                  color: Color(0xFF16A34A),
-                  size: 30,
-                ),
-              ),
-              const SizedBox(height: 14),
-              const Text(
-                'ChatGPT Assignment Ready',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
-              ),
-              const SizedBox(height: 6),
-              const Text(
-                'Your assignment created from ChatGPT is here. Add it to your assignments list.',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 13, color: Color(0xFF475569)),
-              ),
-              const SizedBox(height: 10),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF1F5F9),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  doc.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF1E293B)),
-                ),
-              ),
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        side: const BorderSide(color: Color(0xFF0057D2)),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                      onPressed: () {
-                        Navigator.pop(ctx);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => CreateGeneralDocumentScreen(initialDoc: doc),
-                          ),
-                        );
-                      },
-                      child: const Text('Take Notes', style: TextStyle(color: Color(0xFF0057D2), fontWeight: FontWeight.w600)),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF0057D2),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                      onPressed: () {
-                        Navigator.pop(ctx);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => CreateQAAssignmentScreen(initialDoc: doc),
-                          ),
-                        );
-                      },
-                      child: const Text('Open Q&A', style: TextStyle(fontWeight: FontWeight.bold)),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              SizedBox(
-                width: double.infinity,
-                child: TextButton(
-                  onPressed: () {
-                    Navigator.pop(ctx);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => ChoosePageScreen(
-                          doc: doc,
-                          onApply: (updatedDoc) async {
-                            await LocalStorageService.saveDoc(updatedDoc);
-                          },
-                        ),
-                      ),
-                    );
-                  },
-                  child: const Text('Choose Paper & Handwriting Direct', style: TextStyle(color: Color(0xFF64748B), fontSize: 13)),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
   }
 
   @override

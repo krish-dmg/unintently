@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import '../models/assignment_doc.dart';
 import '../services/local_storage_service.dart';
@@ -15,6 +16,8 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
+  static const MethodChannel _deepLinkChannel = MethodChannel('com.unintently.app/deeplink');
+
   late TabController _tabController;
   List<AssignmentDoc> _docs = [];
   bool _isLoading = true;
@@ -30,6 +33,30 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       if (mounted) setState(() {});
     });
     _loadDocs();
+    _initDeepLinking();
+  }
+
+  void _initDeepLinking() {
+    _deepLinkChannel.setMethodCallHandler((call) async {
+      if (call.method == 'onDeepLink' && call.arguments is String) {
+        _handleDeepLink(call.arguments as String);
+      }
+    });
+
+    _deepLinkChannel.invokeMethod<String>('getInitialLink').then((link) {
+      if (link != null && link.trim().isNotEmpty) {
+        _handleDeepLink(link.trim());
+      }
+    }).catchError((_) {});
+  }
+
+  void _handleDeepLink(String link) {
+    if (!mounted || link.trim().isEmpty) return;
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => QrExtensionSyncScreen(initialCode: link),
+      ),
+    ).then((_) => _loadDocs());
   }
 
   Future<void> _loadDocs() async {

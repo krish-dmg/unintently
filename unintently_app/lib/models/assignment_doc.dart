@@ -114,15 +114,18 @@ class AssignmentDoc {
       return parsed;
     }
 
-    return rawItems
-        .whereType<Map<String, dynamic>>()
-        .map((i) => QAItem.fromMap(i))
-        .toList();
+    final List<QAItem> result = [];
+    for (final item in rawItems) {
+      if (item is Map) {
+        result.add(QAItem.fromMap(Map<String, dynamic>.from(item)));
+      }
+    }
+    return result;
   }
 
   factory AssignmentDoc.fromMap(Map<String, dynamic> rawMap) {
-    final Map<String, dynamic> map = (rawMap['assignment'] is Map<String, dynamic>)
-        ? rawMap['assignment'] as Map<String, dynamic>
+    final Map<String, dynamic> map = (rawMap['assignment'] is Map)
+        ? Map<String, dynamic>.from(rawMap['assignment'] as Map)
         : rawMap;
 
     return AssignmentDoc(

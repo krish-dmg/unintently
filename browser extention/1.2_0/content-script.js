@@ -374,7 +374,10 @@
           ${ICONS.close}
         </button>
 
-        <div class="unintently-modal-brand-title">Unintently</div>
+        <div class="unintently-modal-brand-title" style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+          <img src="${chrome.runtime.getURL('logo.png')}" width="24" height="24" style="border-radius: 6px; display: inline-block;" alt="Unintently" />
+          <span>Unintently</span>
+        </div>
         <div class="unintently-modal-heading">Scan QR</div>
         <div class="unintently-modal-subtitle">Scan this on mobile to open assignment</div>
 
