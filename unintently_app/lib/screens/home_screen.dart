@@ -195,11 +195,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(24),
+                    borderRadius: BorderRadius.circular(12),
                     child: Image.asset(
-                      'assets/images/intentlyLogo.png',
+                      'assets/branding/logo.png',
                       width: 48,
                       height: 48,
+                      fit: BoxFit.cover,
                       errorBuilder: (ctx, err, stack) => const Icon(Icons.school, color: Colors.white, size: 40),
                     ),
                   ),

@@ -1,6 +1,6 @@
 <div align="center">
 
-  <img src="unintently_app/assets/branding/logo.png" alt="Intently Logo" width="128" height="128" />
+  <img src="unintently_app/assets/branding/logo.png" alt="Unintently APK Logo" width="128" height="128" />
 
   <h1>Unintently (v2.0)</h1>
 
