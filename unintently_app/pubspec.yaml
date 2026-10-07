@@ -1,0 +1,72 @@
+name: unintently
+description: "Unintently v2 - Free, Open-Source AI-Powered Text-to-Handwriting & Assignment Generator."
+publish_to: 'none'
+
+version: 2.0.0+1
+
+environment:
+  sdk: ^3.13.5
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  google_fonts: ^6.2.1
+  pdf: ^3.11.1
+  printing: ^5.13.2
+  path_provider: ^2.1.4
+  shared_preferences: ^2.3.2
+  http: ^1.2.2
+  uuid: ^4.5.1
+  intl: ^0.19.0
+  flutter_svg: ^2.0.10+1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/
+    - assets/branding/
+
+  fonts:
+    - family: Writing1
+      fonts:
+        - asset: assets/fonts/Writing1.otf
+    - family: Writing2
+      fonts:
+        - asset: assets/fonts/Writing2.otf
+    - family: Writing3
+      fonts:
+        - asset: assets/fonts/Writing3.otf
+    - family: Writing4
+      fonts:
+        - asset: assets/fonts/Writing4.ttf
+    - family: Writing5
+      fonts:
+        - asset: assets/fonts/Writing5.ttf
+    - family: Writing7
+      fonts:
+        - asset: assets/fonts/Writing7.otf
+    - family: Writing8
+      fonts:
+        - asset: assets/fonts/Writing8.ttf
+    - family: intentlyR1
+      fonts:
+        - asset: assets/fonts/intentlyR1.otf
+    - family: intentlyR2
+      fonts:
+        - asset: assets/fonts/intentlyR2.otf
+    - family: intentlyR8
+      fonts:
+        - asset: assets/fonts/intentlyR8.ttf
+    - family: intentlyR11
+      fonts:
+        - asset: assets/fonts/intentlyR11.ttf
+    - family: intentlyR12
+      fonts:
+        - asset: assets/fonts/intentlyR12.ttf
