@@ -25,6 +25,7 @@ class _ChoosePageScreenState extends State<ChoosePageScreen> {
   late int _selectedQColor;
   late int _selectedAColor;
   late bool _hasMobileShadow;
+  int _previewPageIndex = 0;
 
   final List<Color> _inkPalette = [
     const Color(0xFF0D47A1), // Deep Navy Blue
@@ -159,7 +160,10 @@ class _ChoosePageScreenState extends State<ChoosePageScreen> {
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                         ),
-                        onPressed: () => Navigator.pop(ctx),
+                        onPressed: () {
+                          setState(() => _selectedPaper = tempPaper);
+                          Navigator.pop(ctx);
+                        },
                         child: const Text('Apply', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                       ),
                     ),
@@ -269,7 +273,10 @@ class _ChoosePageScreenState extends State<ChoosePageScreen> {
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                         ),
-                        onPressed: () => Navigator.pop(ctx),
+                        onPressed: () {
+                          setState(() => _selectedFont = tempFont);
+                          Navigator.pop(ctx);
+                        },
                         child: const Text('Apply', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                       ),
                     ),
@@ -418,7 +425,13 @@ class _ChoosePageScreenState extends State<ChoosePageScreen> {
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                         ),
-                        onPressed: () => Navigator.pop(ctx),
+                        onPressed: () {
+                          setState(() {
+                            _selectedQColor = tempQColor;
+                            _selectedAColor = tempAColor;
+                          });
+                          Navigator.pop(ctx);
+                        },
                         child: const Text('Apply', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                       ),
                     ),
@@ -523,7 +536,10 @@ class _ChoosePageScreenState extends State<ChoosePageScreen> {
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                         ),
-                        onPressed: () => Navigator.pop(ctx),
+                        onPressed: () {
+                          setState(() => _hasMobileShadow = tempShadow);
+                          Navigator.pop(ctx);
+                        },
                         child: const Text('Apply', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                       ),
                     ),
@@ -568,27 +584,45 @@ class _ChoosePageScreenState extends State<ChoosePageScreen> {
             child: Center(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: AspectRatio(
-                  aspectRatio: 1 / 1.414,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(4),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.12),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    AspectRatio(
+                      aspectRatio: 1 / 1.414,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(4),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.12),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
                         ),
-                      ],
+                        child: PageView.builder(
+                          itemCount: pages.length,
+                          onPageChanged: (idx) => setState(() => _previewPageIndex = idx),
+                          itemBuilder: (context, idx) {
+                            return RuledPagePreview(
+                              doc: updatedDoc,
+                              pageIndex: idx,
+                              pages: pages,
+                              metrics: metrics,
+                            );
+                          },
+                        ),
+                      ),
                     ),
-                    child: RuledPagePreview(
-                      doc: updatedDoc,
-                      pageIndex: 0,
-                      pages: pages,
-                      metrics: metrics,
-                    ),
-                  ),
+                    if (pages.length > 1) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        'Page ${_previewPageIndex + 1} of ${pages.length}',
+                        style: const TextStyle(fontSize: 12, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
+                      ),
+                    ],
+                  ],
                 ),
               ),
             ),
