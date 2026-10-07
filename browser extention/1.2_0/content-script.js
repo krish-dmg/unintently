@@ -56,7 +56,7 @@
       document.body.removeChild(textarea);
       return successful;
     } catch (e) {
-      console.error("[Unintently] Clipboard copy failed:", e);
+      console.info("[Unintently] Clipboard copy note:", e);
       return false;
     }
   }
@@ -288,13 +288,16 @@
       // Primary: Use Unintently Cloudflare Worker backend
       try {
         const storageData = await chrome.storage.local.get(["workerApiUrl"]);
-        const workerUrl = storageData.workerApiUrl || "https://unintently-backend.brksmartkraft.workers.dev";
+        let workerUrl = storageData.workerApiUrl;
+        if (!workerUrl || workerUrl.includes("localhost") || workerUrl.includes("intently.in")) {
+          workerUrl = "https://unintently-backend.brksmartkraft.workers.dev";
+        }
 
         const res = await fetch(workerUrl.replace(/\/$/, "") + "/create/chatGPTAssignments", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(assignmentDoc),
-          signal: AbortSignal.timeout(4000)
+          signal: AbortSignal.timeout(8000)
         });
 
         if (res.ok) {
@@ -305,7 +308,7 @@
           }
         }
       } catch (err) {
-        console.warn("[Unintently] Cloudflare Worker sync error:", err?.message);
+        console.info("[Unintently] Cloudflare Worker sync fallback:", err?.message);
       }
 
       // Fallback: Offline local link
@@ -328,7 +331,7 @@
         });
         await chrome.storage.local.set({ conversationDataList: list.slice(0, 80) });
       } catch (storeErr) {
-        console.warn("[Unintently] Local storage save error:", storeErr);
+        console.info("[Unintently] Local storage save note:", storeErr);
       }
 
       // Show in-page Modal Dialog matching authentic reference UI
@@ -340,7 +343,7 @@
         assignmentDoc: assignmentDoc
       });
     } catch (err) {
-      console.error("[Unintently] Conversion error:", err);
+      console.info("[Unintently] Conversion note:", err);
       alert("Error converting conversation: " + (err?.message || "Unknown error"));
     } finally {
       isConverting = false;
@@ -408,11 +411,11 @@
       try {
         window.UnintentlyQR.toCanvas(canvas, linkUrl, { width: 200, margin: 2 }, function (err) {
           if (err) {
-            console.warn("[Unintently] QR canvas fallback error:", err);
+            console.info("[Unintently] QR canvas fallback note:", err);
           }
         });
       } catch (qrEx) {
-        console.error("[Unintently] QR rendering error:", qrEx);
+        console.info("[Unintently] QR rendering note:", qrEx);
       }
     }
 

@@ -99,7 +99,12 @@
       const list = Array.isArray(data.conversationDataList) ? data.conversationDataList : [];
 
       if (workerUrlInput) {
-        workerUrlInput.value = data.workerApiUrl || "https://unintently-backend.brksmartkraft.workers.dev";
+        let currentUrl = data.workerApiUrl;
+        if (!currentUrl || currentUrl.includes("localhost") || currentUrl.includes("intently.in")) {
+          currentUrl = "https://unintently-backend.brksmartkraft.workers.dev";
+          await chrome.storage.local.set({ workerApiUrl: currentUrl });
+        }
+        workerUrlInput.value = currentUrl;
       }
 
       countBadgeEl.textContent = list.length;
@@ -113,7 +118,7 @@
       emptyStateEl.classList.add("hidden");
       renderList(list);
     } catch (err) {
-      console.error("[Unintently] Error loading assignments:", err);
+      console.info("[Unintently] Note loading assignments:", err);
     }
   }
 
@@ -232,11 +237,11 @@
       try {
         window.UnintentlyQR.toCanvas(qrCanvas, code, { width: 200, margin: 2 }, (err) => {
           if (err) {
-            console.warn("[Unintently] Fallback to shortlink QR:", err);
+            console.info("[Unintently] Fallback to shortlink QR note:", err);
           }
         });
       } catch (ex) {
-        console.error("[Unintently] QR error:", ex);
+        console.info("[Unintently] QR note:", ex);
       }
     }
 
