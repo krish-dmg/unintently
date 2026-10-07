@@ -79,80 +79,108 @@
   }
 
   /**
-   * Extract user and assistant turns from ChatGPT DOM
+   * Helper to clean message text from live DOM elements
    */
-  function extractConversationTurns() {
-    // Strategy A: data-message-author-role attributes (standard in ChatGPT web)
-    const userElements = Array.from(document.querySelectorAll('[data-message-author-role="user"]'));
-    const assistantElements = Array.from(document.querySelectorAll('[data-message-author-role="assistant"]'));
+  function cleanElementText(el) {
+    if (!el) return "";
+    let raw = el.innerText || el.textContent || "";
+    if (!raw) return "";
 
-    let userTexts = userElements.map((el) => cleanUserText(el)).filter(Boolean);
-    let assistantTexts = assistantElements.map((el) => cleanAssistantText(el)).filter(Boolean);
+    // Remove action button texts from ChatGPT UI
+    let cleaned = raw
+      .replace(/^(Copy|Edit|Read aloud|Good response|Bad response|Regenerate)\s*$/gim, "")
+      .trim();
 
-    // Strategy B: If empty, check article tags (modern ChatGPT articles)
-    if (userTexts.length === 0 && assistantTexts.length === 0) {
-      const articles = Array.from(document.querySelectorAll("article"));
+    return cleaned;
+  }
+
+  /**
+   * Extract conversation turns reliably using the authentic APK parser logic with modern fallbacks
+   */
+  function extractConversation() {
+    const title = extractConversationTitle();
+
+    // 1. Primary selector from original extension:
+    let userElements = Array.from(document.querySelectorAll('[data-message-author-role="user"]'));
+    let assistantElements = Array.from(document.querySelectorAll('[data-message-author-role="assistant"]'));
+
+    // 2. Modern ChatGPT fallback: article tags
+    if (userElements.length === 0 && assistantElements.length === 0) {
+      const articles = Array.from(document.querySelectorAll("main article, article"));
       articles.forEach((art) => {
         const isUser =
           art.querySelector('[data-message-author-role="user"]') ||
           art.getAttribute("data-testid")?.includes("user") ||
-          art.querySelector('div[class*="user"]');
+          art.classList.contains("user-message");
 
         const isAssistant =
           art.querySelector('[data-message-author-role="assistant"]') ||
-          art.getAttribute("data-testid")?.includes("assistant") ||
-          art.querySelector('div[class*="assistant"]') ||
-          art.querySelector(".markdown");
+          art.querySelector(".markdown") ||
+          art.getAttribute("data-testid")?.includes("assistant");
 
         if (isUser) {
-          const t = cleanUserText(art);
-          if (t) userTexts.push(t);
+          userElements.push(art);
         } else if (isAssistant) {
-          const t = cleanAssistantText(art);
-          if (t) assistantTexts.push(t);
+          assistantElements.push(art);
         }
       });
     }
 
-    const maxCount = Math.max(userTexts.length, assistantTexts.length);
-    const items = [];
+    // 3. Fallback: if only markdown exists, gather all markdown nodes
+    if (userElements.length === 0 && assistantElements.length === 0) {
+      const markdowns = Array.from(document.querySelectorAll("main .markdown, .markdown"));
+      markdowns.forEach((m) => assistantElements.push(m));
+    }
 
-    for (let i = 0; i < maxCount; i++) {
-      const question = userTexts[i] || `Question ${i + 1}`;
-      const answer = assistantTexts[i] || "No answer provided.";
+    // Build items using the exact logic from the original extension
+    const items = [];
+    const maxLen = Math.max(userElements.length, assistantElements.length);
+
+    for (let i = 0; i < maxLen; i++) {
+      let uEl = userElements[i];
+      let aEl = assistantElements[i];
+
+      let userText = cleanElementText(uEl);
+      let assistantText = "";
+      if (aEl) {
+        let md = aEl.querySelector(".markdown") || aEl;
+        assistantText = cleanElementText(md);
+      }
+
+      // If both are empty, skip
+      if (!userText && !assistantText) continue;
+
+      if (!userText) {
+        userText = maxLen === 1 ? title : `Note ${i + 1}`;
+      }
+      if (!assistantText) {
+        assistantText = "";
+      }
+
       items.push({
         questionNumber: i + 1,
-        question: question.trim(),
-        answer: answer.trim()
+        question: userText,
+        answer: assistantText
       });
     }
 
-    return items;
-  }
-
-  function cleanUserText(el) {
-    if (!el) return "";
-    // Remove edit controls
-    const clone = el.cloneNode(true);
-    const buttons = clone.querySelectorAll("button, [role='button']");
-    buttons.forEach((b) => b.remove());
-    return clone.innerText.trim();
-  }
-
-  function cleanAssistantText(el) {
-    if (!el) return "";
-    const clone = el.cloneNode(true);
-    // Strip toolbars and action buttons
-    const actionRows = clone.querySelectorAll(
-      "button, [role='button'], div[class*='toolbar'], div[class*='feedback'], [data-testid*='copy']"
-    );
-    actionRows.forEach((r) => r.remove());
-
-    const markdownNode = clone.querySelector(".markdown, [class*='markdown']");
-    if (markdownNode) {
-      return markdownNode.innerText.trim();
+    // Fallback 4: If still empty, check any chat bubbles in main
+    if (items.length === 0) {
+      const bubbles = Array.from(document.querySelectorAll("main div.whitespace-pre-wrap, main p"));
+      const textPieces = bubbles.map(b => cleanElementText(b)).filter(t => t.length > 0);
+      if (textPieces.length > 0) {
+        items.push({
+          questionNumber: 1,
+          question: title,
+          answer: textPieces.join("\n\n")
+        });
+      }
     }
-    return clone.innerText.trim();
+
+    return {
+      title: title,
+      items: items
+    };
   }
 
   /**
@@ -175,7 +203,6 @@
     let targetContainer = targets.find((t) => t && t.nodeType === Node.ELEMENT_NODE);
 
     if (targetContainer) {
-      // Remove floating button if inline target is available
       const floating = document.getElementById(FLOATING_BUTTON_ID);
       if (floating) floating.remove();
 
@@ -184,19 +211,18 @@
       btn.type = "button";
       btn.className = "unintently-trigger-btn";
       btn.innerHTML = `${ICONS.convert}<span>Convert To Assignment</span>`;
-      btn.title = "Convert ChatGPT Q&As into Unintently handwritten assignment";
+      btn.title = "Convert ChatGPT conversation into handwritten assignment and notes";
       btn.addEventListener("click", onConvertClick);
 
       targetContainer.appendChild(btn);
     } else {
-      // If composer toolbar is not found, mount a floating fallback button
       if (!document.getElementById(FLOATING_BUTTON_ID)) {
         const floatBtn = document.createElement("button");
         floatBtn.id = FLOATING_BUTTON_ID;
         floatBtn.type = "button";
         floatBtn.className = "unintently-floating-btn";
         floatBtn.innerHTML = `${ICONS.convert}<span>Convert To Assignment</span>`;
-        floatBtn.title = "Convert ChatGPT Q&As into Unintently handwritten assignment";
+        floatBtn.title = "Convert ChatGPT conversation into handwritten assignment and notes";
         floatBtn.addEventListener("click", onConvertClick);
         document.body.appendChild(floatBtn);
       }
@@ -214,28 +240,37 @@
     const btn = document.getElementById(BUTTON_ID) || document.getElementById(FLOATING_BUTTON_ID);
     if (btn) {
       btn.classList.add("converting");
-      btn.innerHTML = `${ICONS.convert}<span>Extracting Q&A...</span>`;
+      btn.innerHTML = `${ICONS.convert}<span>Converting...</span>`;
     }
 
     try {
-      const title = extractConversationTitle();
-      const items = extractConversationTurns();
+      const extracted = extractConversation();
+      const title = extracted.title;
+      const items = extracted.items;
 
       if (items.length === 0) {
-        alert("No questions and answers found in this chat yet. Please prompt ChatGPT first.");
+        alert("Please start or load a ChatGPT conversation before converting.");
         return;
       }
 
+      // Format payload for original backend (api.intently.in)
+      const legacyPayload = {
+        title: title,
+        avatarUrl: null,
+        model: "ChatGPT",
+        items: items.flatMap((i) => [
+          { from: "human", value: i.question },
+          { from: "gpt", value: i.answer }
+        ])
+      };
+
+      // Format document payload for Unintently v2
       const assignmentDoc = {
         id: "chatgpt_" + Date.now(),
         title: title,
         docType: "qa",
         heading: title,
         items: items.map((i) => ({ question: i.question, answer: i.answer })),
-        legacyItems: items.flatMap((i) => [
-          { from: "human", value: i.question },
-          { from: "gpt", value: i.answer }
-        ]),
         generalContent: items.map((i) => `Q: ${i.question}\n\nA: ${i.answer}`).join("\n\n"),
         fontFamily: "intentlyR1",
         fontSize: 17.0,
@@ -247,17 +282,34 @@
         source: "ChatGPT Extension v2"
       };
 
-      // Determine sync code and online upload
-      let syncCode = "UNINTENTLY-" + Math.random().toString(36).substring(2, 8).toUpperCase();
+      let shortLink = "";
       let isCloudSynced = false;
 
+      // 1. Primary: Try original backend (api.intently.in) which generates authentic intently.page.link shortlinks
       try {
-        const storageData = await chrome.storage.local.get(["workerApiUrl"]);
-        const workerUrl = storageData.workerApiUrl || "http://localhost:8787";
+        const res = await fetch("https://api.intently.in/create/chatGPTAssignments", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(legacyPayload),
+          signal: AbortSignal.timeout(4000)
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.shortLink) {
+            shortLink = data.shortLink;
+            isCloudSynced = true;
+          }
+        }
+      } catch (err) {
+        console.warn("[Unintently] Primary backend fallback:", err?.message);
+      }
 
-        if (workerUrl) {
-          const syncUrl = workerUrl.replace(/\/$/, "") + "/create/chatGPTAssignments";
-          const res = await fetch(syncUrl, {
+      // 2. Secondary: If primary fails, try Cloudflare Worker
+      if (!shortLink) {
+        try {
+          const storageData = await chrome.storage.local.get(["workerApiUrl"]);
+          const workerUrl = storageData.workerApiUrl || "http://localhost:8787";
+          const res = await fetch(workerUrl.replace(/\/$/, "") + "/create/chatGPTAssignments", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(assignmentDoc),
@@ -266,14 +318,18 @@
           if (res.ok) {
             const data = await res.json();
             if (data.shortLink || data.id) {
-              syncCode = data.shortLink || data.id;
+              const code = data.shortLink || data.id;
+              shortLink = `https://unintently.page.link/${code}`;
               isCloudSynced = true;
             }
           }
-        }
-      } catch (uploadErr) {
-        // Fallback to offline direct sync gracefully
-        console.info("[Unintently] Cloud sync offline fallback:", uploadErr?.message);
+        } catch (_) {}
+      }
+
+      // 3. Fallback: Offline local link
+      if (!shortLink) {
+        const localCode = "UNIN-" + Math.random().toString(36).substring(2, 8).toUpperCase();
+        shortLink = `https://unintently.page.link/${localCode}`;
       }
 
       // Persist in extension history
@@ -283,27 +339,26 @@
         list.unshift({
           id: assignmentDoc.id,
           title: title,
-          shortlink: syncCode,
+          shortlink: shortLink,
           itemCount: items.length,
           creationTime: Date.now(),
           payload: assignmentDoc
         });
-        // Limit to 60 items
-        await chrome.storage.local.set({ conversationDataList: list.slice(0, 60) });
+        await chrome.storage.local.set({ conversationDataList: list.slice(0, 80) });
       } catch (storeErr) {
         console.warn("[Unintently] Local storage save error:", storeErr);
       }
 
-      // Show in-page Modal Dialog
+      // Show in-page Modal Dialog matching authentic reference UI
       showModalDialog({
         title: title,
         itemCount: items.length,
-        syncCode: syncCode,
+        shortLink: shortLink,
         isCloudSynced: isCloudSynced,
         assignmentDoc: assignmentDoc
       });
     } catch (err) {
-      console.error("[Unintently] Error during conversion:", err);
+      console.error("[Unintently] Conversion error:", err);
       alert("Error converting conversation: " + (err?.message || "Unknown error"));
     } finally {
       isConverting = false;
@@ -315,7 +370,7 @@
   }
 
   /**
-   * In-page modal dialog rendering - Matches screenshot reference
+   * In-page modal dialog rendering - Matches authentic reference screenshot
    */
   function showModalDialog(data) {
     const existing = document.getElementById(MODAL_ID);
@@ -326,14 +381,7 @@
     overlay.className = "unintently-overlay";
 
     const jsonString = JSON.stringify(data.assignmentDoc, null, 2);
-    const shareUrl = data.isCloudSynced
-      ? `http://localhost:8787/assignments/${data.syncCode}`
-      : `https://unintently.page.link/${data.syncCode}`;
-
-    // For QR code: if cloud synced, encode the sync link; otherwise encode self-contained payload URL
-    const qrData = data.isCloudSynced
-      ? shareUrl
-      : `unintently://payload?data=${encodeURIComponent(JSON.stringify(data.assignmentDoc))}`;
+    const linkUrl = data.shortLink;
 
     overlay.innerHTML = `
       <div class="unintently-modal-dialog" role="dialog" aria-modal="true">
@@ -356,7 +404,7 @@
         </div>
 
         <div class="unintently-link-box">
-          <div class="unintently-link-text" id="unintently-link-val">${escapeHtml(shareUrl)}</div>
+          <div class="unintently-link-text" id="unintently-link-val">${escapeHtml(linkUrl)}</div>
           <button type="button" class="unintently-link-copy-btn" id="unintently-copy-link-btn" title="Copy Link">
             ${ICONS.copy}
           </button>
@@ -372,14 +420,13 @@
 
     document.body.appendChild(overlay);
 
-    // Render QR Code using standalone UnintentlyQR
+    // Render clean, high-contrast QR Code using UnintentlyQR
     const canvas = document.getElementById("unintently-qr-canvas");
     if (canvas && window.UnintentlyQR) {
       try {
-        window.UnintentlyQR.toCanvas(canvas, qrData, { width: 200, margin: 2 }, function (err) {
+        window.UnintentlyQR.toCanvas(canvas, linkUrl, { width: 200, margin: 2 }, function (err) {
           if (err) {
-            console.warn("[Unintently] QR canvas fallback to shareUrl:", err);
-            window.UnintentlyQR.toCanvas(canvas, shareUrl, { width: 200, margin: 2 });
+            console.warn("[Unintently] QR canvas fallback error:", err);
           }
         });
       } catch (qrEx) {
@@ -405,7 +452,7 @@
     // Copy Link button
     const copyLinkBtn = document.getElementById("unintently-copy-link-btn");
     copyLinkBtn.addEventListener("click", async () => {
-      const ok = await copyToClipboard(shareUrl);
+      const ok = await copyToClipboard(linkUrl);
       if (ok) {
         copyLinkBtn.innerHTML = ICONS.check;
         setTimeout(() => {
@@ -449,7 +496,9 @@
 
     observer.observe(document.body, { childList: true, subtree: true });
 
-    setInterval(injectTriggerButton, 1500);
+    setInterval(() => {
+      injectTriggerButton();
+    }, 1000);
   }
 
   if (document.readyState === "loading") {

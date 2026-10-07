@@ -5,9 +5,14 @@ import 'package:http/http.dart' as http;
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../models/assignment_doc.dart';
 import '../services/local_storage_service.dart';
+import 'choose_page_screen.dart';
+import 'create_general_document_screen.dart';
+import 'create_qa_assignment_screen.dart';
 
 class QrExtensionSyncScreen extends StatefulWidget {
-  const QrExtensionSyncScreen({super.key});
+  final String? initialCode;
+
+  const QrExtensionSyncScreen({super.key, this.initialCode});
 
   @override
   State<QrExtensionSyncScreen> createState() => _QrExtensionSyncScreenState();
@@ -40,6 +45,13 @@ class _QrExtensionSyncScreenState extends State<QrExtensionSyncScreen>
     _laserAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _laserAnimController, curve: Curves.easeInOut),
     );
+
+    if (widget.initialCode != null && widget.initialCode!.trim().isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _manualTextController.text = widget.initialCode!.trim();
+        _processScannedData(widget.initialCode!.trim());
+      });
+    }
   }
 
   @override
@@ -66,8 +78,13 @@ class _QrExtensionSyncScreenState extends State<QrExtensionSyncScreen>
 
   Future<void> _processScannedData(String rawInput) async {
     String text = rawInput.trim();
+    if (text.isEmpty) return;
+
+    setState(() => _isProcessing = true);
 
     try {
+      AssignmentDoc? doc;
+
       // 1. Check if input is a URL with payload parameter
       if (text.contains('data=')) {
         final uri = Uri.tryParse(text);
@@ -86,39 +103,42 @@ class _QrExtensionSyncScreenState extends State<QrExtensionSyncScreen>
         } catch (_) {}
       }
 
-      // 3. Check for legacy Firebase Dynamic Link (https://intently.page.link/...)
-      if (text.contains('intently.page.link')) {
-        try {
-          final client = http.Client();
-          final request = http.Request('GET', Uri.parse(text))..followRedirects = false;
-          final response = await client.send(request).timeout(const Duration(seconds: 4));
-          final location = response.headers['location'];
-          if (location != null && location.isNotEmpty) {
-            final targetUri = Uri.tryParse(location);
-            final assignmentId = targetUri?.queryParameters['assignmentId'];
-            if (assignmentId != null) {
-              text = json.encode({
-                'id': assignmentId,
-                'title': 'Scanned Assignment',
-                'docType': 'qa',
-                'items': [
-                  {
-                    'question': 'Imported from Intently link ($assignmentId)',
-                    'answer': 'Assignment reference verified.',
-                  }
-                ]
-              });
+      // 3. Check for Firebase Dynamic Link (intently.page.link or unintently.page.link)
+      if (text.contains('.page.link') || (text.startsWith('http') && !text.contains('/assignments/'))) {
+        String? assignmentId;
+
+        final parsedUri = Uri.tryParse(text);
+        if (parsedUri != null && parsedUri.queryParameters.containsKey('assignmentId')) {
+          assignmentId = parsedUri.queryParameters['assignmentId'];
+        } else if (text.contains('.page.link')) {
+          try {
+            final client = http.Client();
+            final request = http.Request('GET', Uri.parse(text))..followRedirects = false;
+            final response = await client.send(request).timeout(const Duration(seconds: 5));
+            final location = response.headers['location'];
+            if (location != null && location.isNotEmpty) {
+              final targetUri = Uri.tryParse(location);
+              assignmentId = targetUri?.queryParameters['assignmentId'];
             }
-          }
-        } catch (_) {}
+          } catch (_) {}
+        }
+
+        if (assignmentId != null && assignmentId.isNotEmpty) {
+          doc = await _fetchFromFirestore(assignmentId);
+        }
       }
 
-      // 4. Check if input is a sync code or remote worker URL
-      if (!text.startsWith('{') && (text.startsWith('UNIN-') || text.startsWith('http'))) {
+      // 4. Check if input is a raw Firestore assignment ID (e.g. kTRgsgj6Dv5Iqqm7f8SZ)
+      if (doc == null && !text.startsWith('{') && RegExp(r'^[A-Za-z0-9_-]{16,28}$').hasMatch(text)) {
+        doc = await _fetchFromFirestore(text);
+      }
+
+      // 5. Check if input is a sync code or remote worker URL
+      if (doc == null && !text.startsWith('{') && (text.startsWith('UNIN-') || text.startsWith('http'))) {
         String code = text;
         if (text.startsWith('http')) {
-          final uri = Uri.parse(text);
-          code = uri.pathSegments.isNotEmpty ? uri.pathSegments.last : text;
+          final uri = Uri.tryParse(text);
+          code = uri?.pathSegments.isNotEmpty == true ? uri!.pathSegments.last : text;
         }
 
         final candidateUrls = [
@@ -140,20 +160,40 @@ class _QrExtensionSyncScreenState extends State<QrExtensionSyncScreen>
         }
       }
 
-      // 5. Parse into AssignmentDoc
-      final doc = AssignmentDoc.fromJson(text);
+      // 6. Parse into AssignmentDoc if JSON
+      if (doc == null && text.startsWith('{')) {
+        doc = AssignmentDoc.fromJson(text);
+      }
+
+      // 7. Fallback: parse as general document / notes
+      doc ??= AssignmentDoc(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        title: 'Imported Notes',
+        docType: 'general',
+        heading: 'Notes',
+        generalContent: rawInput,
+        fontFamily: 'intentlyR1',
+        fontSize: 17.0,
+        lineSpacing: 1.6,
+        paperAsset: 'assets/images/ruled1.jpg',
+      );
+
       await LocalStorageService.saveDoc(doc);
 
       if (mounted) {
         _showSuccessSheet(doc);
       }
     } catch (_) {
-      // Fallback: parse as general document
       final doc = AssignmentDoc(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
-        title: 'ChatGPT Assignment',
+        title: 'ChatGPT Notes',
         docType: 'general',
+        heading: 'Notes',
         generalContent: rawInput,
+        fontFamily: 'intentlyR1',
+        fontSize: 17.0,
+        lineSpacing: 1.6,
+        paperAsset: 'assets/images/ruled1.jpg',
       );
       await LocalStorageService.saveDoc(doc);
 
@@ -167,6 +207,60 @@ class _QrExtensionSyncScreenState extends State<QrExtensionSyncScreen>
     }
   }
 
+  Future<AssignmentDoc?> _fetchFromFirestore(String assignmentId) async {
+    try {
+      final fsUrl =
+          'https://firestore.googleapis.com/v1/projects/intently-502ef/databases/(default)/documents/chatGPTAssignments/$assignmentId';
+      final fsRes = await http.get(Uri.parse(fsUrl)).timeout(const Duration(seconds: 5));
+      if (fsRes.statusCode == 200) {
+        final fsData = json.decode(fsRes.body);
+        final fields = fsData['fields'] as Map<String, dynamic>?;
+        if (fields != null) {
+          final title = fields['name']?['stringValue'] ?? 'ChatGPT Assignment';
+          final isGeneral = fields['isGeneral']?['booleanValue'] ?? false;
+
+          final qaModel = fields['questionAnswersModel']?['mapValue']?['fields'];
+          final heading = qaModel?['headingText']?['stringValue'] ?? '';
+          final rawQuestions = qaModel?['questions']?['arrayValue']?['values'] as List? ?? [];
+
+          final List<QAItem> items = [];
+          for (var qItem in rawQuestions) {
+            if (qItem is Map) {
+              final qFields = qItem['mapValue']?['fields'];
+              if (qFields != null) {
+                final q = qFields['question']?['stringValue'] ?? '';
+                final a = qFields['answer']?['stringValue'] ?? '';
+                if (q.isNotEmpty || a.isNotEmpty) {
+                  items.add(QAItem(question: q, answer: a));
+                }
+              }
+            }
+          }
+
+          final generalModel = fields['generalPageModel']?['mapValue']?['fields'];
+          String generalText = generalModel?['text']?['stringValue'] ?? '';
+          if (generalText.isEmpty && items.isNotEmpty) {
+            generalText = items.map((i) => '${i.question}\n\n${i.answer}').join('\n\n');
+          }
+
+          return AssignmentDoc(
+            id: assignmentId,
+            title: title.isNotEmpty ? title : 'ChatGPT Assignment',
+            docType: isGeneral ? 'general' : 'qa',
+            heading: heading.isNotEmpty ? heading : title,
+            items: items,
+            generalContent: generalText,
+            fontFamily: 'intentlyR1',
+            fontSize: 17.0,
+            lineSpacing: 1.6,
+            paperAsset: 'assets/images/ruled1.jpg',
+          );
+        }
+      }
+    } catch (_) {}
+    return null;
+  }
+
   void _showSuccessSheet(AssignmentDoc doc) {
     showModalBottomSheet(
       context: context,
@@ -177,13 +271,13 @@ class _QrExtensionSyncScreenState extends State<QrExtensionSyncScreen>
       ),
       builder: (ctx) {
         return Padding(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                width: 56,
-                height: 56,
+                width: 52,
+                height: 52,
                 decoration: const BoxDecoration(
                   color: Color(0xFFDCFCE7),
                   shape: BoxShape.circle,
@@ -191,41 +285,98 @@ class _QrExtensionSyncScreenState extends State<QrExtensionSyncScreen>
                 child: const Icon(
                   Icons.check_circle_outline,
                   color: Color(0xFF16A34A),
-                  size: 32,
+                  size: 30,
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 14),
               const Text(
-                'Assignment Imported Successfully',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                'ChatGPT Assignment Ready',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
               ),
-              const SizedBox(height: 8),
-              Text(
-                doc.title,
+              const SizedBox(height: 6),
+              const Text(
+                'Your assignment created from ChatGPT is here. Add it to your assignments list.',
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 14, color: Color(0xFF475569), fontWeight: FontWeight.w500),
+                style: TextStyle(fontSize: 13, color: Color(0xFF475569)),
               ),
-              const SizedBox(height: 4),
-              Text(
-                '${doc.items.length} Question & Answer pairs loaded into handwritten pages.',
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 12, color: Colors.grey),
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  doc.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF1E293B)),
+                ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        side: const BorderSide(color: Color(0xFF0057D2)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => CreateGeneralDocumentScreen(initialDoc: doc),
+                          ),
+                        );
+                      },
+                      child: const Text('Take Notes', style: TextStyle(color: Color(0xFF0057D2), fontWeight: FontWeight.w600)),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF0057D2),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => CreateQAAssignmentScreen(initialDoc: doc),
+                          ),
+                        );
+                      },
+                      child: const Text('Open Q&A', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
               SizedBox(
                 width: double.infinity,
-                height: 48,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF0057D2),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
+                child: TextButton(
                   onPressed: () {
                     Navigator.pop(ctx);
-                    Navigator.pop(context, true);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ChoosePageScreen(
+                          doc: doc,
+                          onApply: (updatedDoc) async {
+                            await LocalStorageService.saveDoc(updatedDoc);
+                          },
+                        ),
+                      ),
+                    );
                   },
-                  child: const Text('View Assignments', style: TextStyle(fontWeight: FontWeight.bold)),
+                  child: const Text('Choose Paper & Handwriting Direct', style: TextStyle(color: Color(0xFF64748B), fontSize: 13)),
                 ),
               ),
             ],
