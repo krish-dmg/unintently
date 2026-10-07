@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/assignment_doc.dart';
 import '../services/local_storage_service.dart';
-import '../services/pdf_export_service.dart';
 import 'create_qa_assignment_screen.dart';
 import 'create_general_document_screen.dart';
 import 'qr_extension_sync_screen.dart';
+import 'assignment_preview_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -443,10 +443,18 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                                               _loadDocs();
                                             },
                                           ),
-                                          // Print PDF button
+                                          // Print / Preview PDF button
                                           IconButton(
                                             icon: const Icon(Icons.print_outlined, size: 20, color: Colors.grey),
-                                            onPressed: () => PdfExportService.printOrSharePdf(d),
+                                            tooltip: 'Preview & Print',
+                                            onPressed: () {
+                                              Navigator.push(
+                                                context,
+                                                MaterialPageRoute(
+                                                  builder: (_) => AssignmentPreviewScreen(doc: d),
+                                                ),
+                                              );
+                                            },
                                           ),
                                           // Delete Button
                                           IconButton(

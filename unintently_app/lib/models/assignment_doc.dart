@@ -47,7 +47,7 @@ class AssignmentDoc {
     this.lineSpacing = 1.6,
     this.questionColorValue = 0xFF0D47A1, // Deep Blue
     this.answerColorValue = 0xFF1A237E,   // Navy / Ink
-    this.paperAsset = 'assets/images/ruledAssignment.jpeg',
+    this.paperAsset = 'assets/images/ruled1.jpg',
     this.hasMobileShadow = false,
     this.isCompleted = false,
     DateTime? createdAt,
@@ -90,7 +90,7 @@ class AssignmentDoc {
     lineSpacing: (map['lineSpacing'] as num?)?.toDouble() ?? 1.6,
     questionColorValue: map['questionColorValue'] ?? 0xFF0D47A1,
     answerColorValue: map['answerColorValue'] ?? 0xFF1A237E,
-    paperAsset: map['paperAsset'] ?? 'assets/images/ruledAssignment.jpeg',
+    paperAsset: map['paperAsset'] ?? 'assets/images/ruled1.jpg',
     hasMobileShadow: map['hasMobileShadow'] ?? false,
     isCompleted: map['isCompleted'] ?? false,
     createdAt: map['createdAt'] != null

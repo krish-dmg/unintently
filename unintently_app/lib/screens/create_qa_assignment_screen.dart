@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/assignment_doc.dart';
 import '../services/local_storage_service.dart';
-import '../services/pdf_export_service.dart';
 import 'choose_page_screen.dart';
 
 class CreateQAAssignmentScreen extends StatefulWidget {
@@ -359,7 +358,6 @@ class _CreateQAAssignmentScreenState extends State<CreateQAAssignmentScreen> {
                               _hasMobileShadow = updated.hasMobileShadow;
                             });
                             await LocalStorageService.saveDoc(updated);
-                            await PdfExportService.printOrSharePdf(updated);
                           },
                         ),
                       ),

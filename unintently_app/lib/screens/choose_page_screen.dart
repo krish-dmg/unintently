@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import '../models/preset_options.dart';
 import '../models/assignment_doc.dart';
+import '../services/layout_engine.dart';
+import '../widgets/ruled_page_preview.dart';
+import 'assignment_preview_screen.dart';
 
 class ChoosePageScreen extends StatefulWidget {
   final AssignmentDoc doc;
@@ -22,8 +25,6 @@ class _ChoosePageScreenState extends State<ChoosePageScreen> {
   late int _selectedQColor;
   late int _selectedAColor;
   late bool _hasMobileShadow;
-  int _colorTab = 0; // 0: Question, 1: Answer
-  int _activeSheet = 0; // 0: none, 1: Background, 2: Writing, 3: Pen Color, 4: Effects
 
   final List<Color> _inkPalette = [
     const Color(0xFF0D47A1), // Deep Navy Blue
@@ -65,13 +66,488 @@ class _ChoosePageScreenState extends State<ChoosePageScreen> {
     );
   }
 
+  void _openBackgroundSheet() {
+    String tempPaper = _selectedPaper;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Background',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF1E293B),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close, color: Colors.grey),
+                          onPressed: () => Navigator.pop(ctx),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      height: 140,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: PaperTemplateOption.allPapers.length,
+                        separatorBuilder: (context, index) => const SizedBox(width: 12),
+                        itemBuilder: (context, idx) {
+                          final paper = PaperTemplateOption.allPapers[idx];
+                          final isSelected = paper.assetPath == tempPaper;
+                          return GestureDetector(
+                            onTap: () {
+                              setSheetState(() => tempPaper = paper.assetPath);
+                              setState(() => _selectedPaper = paper.assetPath);
+                            },
+                            child: Container(
+                              width: 95,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: isSelected ? const Color(0xFF10B981) : const Color(0xFFE2E8F0),
+                                  width: isSelected ? 2.5 : 1,
+                                ),
+                              ),
+                              child: Stack(
+                                children: [
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(6),
+                                    child: Image.asset(
+                                      paper.assetPath,
+                                      fit: BoxFit.cover,
+                                      width: double.infinity,
+                                      height: double.infinity,
+                                    ),
+                                  ),
+                                  if (isSelected)
+                                    const Positioned(
+                                      top: 6,
+                                      right: 6,
+                                      child: Icon(Icons.check_circle, color: Color(0xFF10B981), size: 22),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 46,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF10B981),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                        onPressed: () => Navigator.pop(ctx),
+                        child: const Text('Apply', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _openWritingSheet() {
+    String tempFont = _selectedFont;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Writing',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF1E293B),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close, color: Colors.grey),
+                          onPressed: () => Navigator.pop(ctx),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      height: 100,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: HandwritingFontOption.allFonts.length,
+                        separatorBuilder: (context, index) => const SizedBox(width: 12),
+                        itemBuilder: (context, idx) {
+                          final font = HandwritingFontOption.allFonts[idx];
+                          final isSelected = font.fontFamily == tempFont;
+                          return GestureDetector(
+                            onTap: () {
+                              setSheetState(() => tempFont = font.fontFamily);
+                              setState(() => _selectedFont = font.fontFamily);
+                            },
+                            child: Container(
+                              width: 140,
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: isSelected ? const Color(0xFF10B981) : const Color(0xFFCBD5E1),
+                                  width: isSelected ? 2.5 : 1,
+                                ),
+                              ),
+                              child: Stack(
+                                children: [
+                                  Center(
+                                    child: Text(
+                                      'Demo Text',
+                                      style: TextStyle(
+                                        fontFamily: font.fontFamily,
+                                        fontSize: 20,
+                                        color: const Color(0xFF1E3A8A),
+                                      ),
+                                    ),
+                                  ),
+                                  if (isSelected)
+                                    const Positioned(
+                                      top: 2,
+                                      right: 2,
+                                      child: Icon(Icons.check_circle, color: Color(0xFF10B981), size: 20),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 46,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF10B981),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                        onPressed: () => Navigator.pop(ctx),
+                        child: const Text('Apply', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _openPenColorSheet() {
+    int colorTab = 0; // 0: Question, 1: Answer
+    int tempQColor = _selectedQColor;
+    int tempAColor = _selectedAColor;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            final activeColor = colorTab == 0 ? tempQColor : tempAColor;
+            return SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Pen Color',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF1E293B),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close, color: Colors.grey),
+                          onPressed: () => Navigator.pop(ctx),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: InkWell(
+                            onTap: () => setSheetState(() => colorTab = 0),
+                            child: Column(
+                              children: [
+                                Text(
+                                  'Question',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 15,
+                                    color: colorTab == 0 ? const Color(0xFF1D4ED8) : const Color(0xFF64748B),
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Container(
+                                  height: 2.5,
+                                  color: colorTab == 0 ? const Color(0xFF1D4ED8) : Colors.transparent,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: InkWell(
+                            onTap: () => setSheetState(() => colorTab = 1),
+                            child: Column(
+                              children: [
+                                Text(
+                                  'Answer',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 15,
+                                    color: colorTab == 1 ? const Color(0xFF1D4ED8) : const Color(0xFF64748B),
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Container(
+                                  height: 2.5,
+                                  color: colorTab == 1 ? const Color(0xFF1D4ED8) : Colors.transparent,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 18),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: _inkPalette.map((color) {
+                        final isSelected = color.toARGB32() == activeColor;
+                        return GestureDetector(
+                          onTap: () {
+                            if (colorTab == 0) {
+                              setSheetState(() => tempQColor = color.toARGB32());
+                              setState(() => _selectedQColor = color.toARGB32());
+                            } else {
+                              setSheetState(() => tempAColor = color.toARGB32());
+                              setState(() => _selectedAColor = color.toARGB32());
+                            }
+                          },
+                          child: Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: color,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 2),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.2),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: isSelected
+                                ? const Icon(Icons.check, color: Colors.white, size: 22)
+                                : null,
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 46,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF10B981),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                        onPressed: () => Navigator.pop(ctx),
+                        child: const Text('Apply', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _openEffectsSheet() {
+    bool tempShadow = _hasMobileShadow;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Effects',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF1E293B),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close, color: Colors.grey),
+                          onPressed: () => Navigator.pop(ctx),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Center(
+                      child: GestureDetector(
+                        onTap: () {
+                          setSheetState(() => tempShadow = !tempShadow);
+                          setState(() => _hasMobileShadow = tempShadow);
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: tempShadow ? const Color(0xFF10B981) : const Color(0xFFCBD5E1),
+                              width: tempShadow ? 2.5 : 1,
+                            ),
+                          ),
+                          child: Column(
+                            children: [
+                              Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  Image.asset(
+                                    'assets/images/PH.jpg',
+                                    width: 70,
+                                    height: 80,
+                                    fit: BoxFit.contain,
+                                    errorBuilder: (ctx, err, stack) => const Icon(Icons.phone_android, size: 50, color: Colors.blue),
+                                  ),
+                                  if (tempShadow)
+                                    const Icon(Icons.check_circle, color: Color(0xFF10B981), size: 28),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Mobile Shadow',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: tempShadow ? const Color(0xFF10B981) : const Color(0xFF1E293B),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 46,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF10B981),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                        onPressed: () => Navigator.pop(ctx),
+                        child: const Text('Apply', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final updatedDoc = _generateUpdatedDoc();
+    final metrics = PaperMetrics.forAsset(updatedDoc.paperAsset);
+    final pages = AssignmentLayoutEngine.paginateDoc(updatedDoc, metrics);
+
     return Scaffold(
       backgroundColor: const Color(0xFFF1F5F9),
       appBar: AppBar(
         backgroundColor: Colors.white,
-        elevation: 0,
+        elevation: 0.5,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Color(0xFF1E3A8A)),
           onPressed: () => Navigator.pop(context),
@@ -87,7 +563,7 @@ class _ChoosePageScreenState extends State<ChoosePageScreen> {
       ),
       body: Column(
         children: [
-          // Live Dynamic Preview Canvas (No Cutoff, AspectRatio 1 : 1.414)
+          // Dynamic Preview Canvas (Stable A4 Aspect Ratio matching notebook rulings)
           Expanded(
             child: Center(
               child: Padding(
@@ -106,115 +582,11 @@ class _ChoosePageScreenState extends State<ChoosePageScreen> {
                         ),
                       ],
                     ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
-                      child: Stack(
-                        children: [
-                          // 1. Paper Background (Uncut, Fill Full Dimensions)
-                          Positioned.fill(
-                            child: Image.asset(
-                              _selectedPaper,
-                              fit: BoxFit.fill,
-                            ),
-                          ),
-
-                          // 2. Real Mobile Shadow Effect (PE.jpeg with multiply blend)
-                          if (_hasMobileShadow)
-                            Positioned.fill(
-                              child: Opacity(
-                                opacity: 0.45,
-                                child: Image.asset(
-                                  'assets/images/PE.jpeg',
-                                  fit: BoxFit.fill,
-                                ),
-                              ),
-                            ),
-
-                          // 3. User's Real Content
-                          Padding(
-                            padding: const EdgeInsets.only(top: 48, left: 38, right: 28, bottom: 28),
-                            child: SingleChildScrollView(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  if (widget.doc.heading.isNotEmpty) ...[
-                                    Center(
-                                      child: Text(
-                                        widget.doc.heading,
-                                        style: TextStyle(
-                                          fontFamily: _selectedFont,
-                                          fontSize: 17,
-                                          fontWeight: FontWeight.bold,
-                                          color: Color(_selectedQColor),
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 10),
-                                  ],
-
-                                  if (widget.doc.docType == 'general') ...[
-                                    Text(
-                                      widget.doc.generalContent.isEmpty
-                                          ? 'Start writing your document text...'
-                                          : widget.doc.generalContent,
-                                      style: TextStyle(
-                                        fontFamily: _selectedFont,
-                                        fontSize: 14,
-                                        height: 1.5,
-                                        color: Color(_selectedAColor),
-                                      ),
-                                    ),
-                                  ] else ...[
-                                    if (widget.doc.items.isEmpty)
-                                      Padding(
-                                        padding: const EdgeInsets.symmetric(vertical: 20),
-                                        child: Text(
-                                          'No questions added yet. Go back to add questions.',
-                                          style: TextStyle(
-                                            fontFamily: _selectedFont,
-                                            fontSize: 14,
-                                            color: Color(_selectedAColor),
-                                          ),
-                                        ),
-                                      )
-                                    else
-                                      ...List.generate(widget.doc.items.length, (i) {
-                                        final item = widget.doc.items[i];
-                                        return Padding(
-                                          padding: const EdgeInsets.only(bottom: 10),
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                'Q${i + 1}. ${item.question}',
-                                                style: TextStyle(
-                                                  fontFamily: _selectedFont,
-                                                  fontSize: 13,
-                                                  fontWeight: FontWeight.bold,
-                                                  color: Color(_selectedQColor),
-                                                ),
-                                              ),
-                                              const SizedBox(height: 2),
-                                              Text(
-                                                'Ans. ${item.answer}',
-                                                style: TextStyle(
-                                                  fontFamily: _selectedFont,
-                                                  fontSize: 13,
-                                                  height: 1.4,
-                                                  color: Color(_selectedAColor),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        );
-                                      }),
-                                  ],
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+                    child: RuledPagePreview(
+                      doc: updatedDoc,
+                      pageIndex: 0,
+                      pages: pages,
+                      metrics: metrics,
                     ),
                   ),
                 ),
@@ -222,10 +594,7 @@ class _ChoosePageScreenState extends State<ChoosePageScreen> {
             ),
           ),
 
-          // Active Drawer / Customization Sheet
-          if (_activeSheet > 0) _buildActiveSheet(),
-
-          // Bottom 4 Tab Buttons (Background, Writing, Pen Color, Effects)
+          // Bottom Controls: 4 Tab Buttons + Save Changes (Matching Reference 5661a3ba)
           Container(
             color: Colors.white,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -238,8 +607,7 @@ class _ChoosePageScreenState extends State<ChoosePageScreen> {
                       child: _buildTabButton(
                         icon: Icons.layers,
                         label: 'Background',
-                        isActive: _activeSheet == 1,
-                        onTap: () => setState(() => _activeSheet = _activeSheet == 1 ? 0 : 1),
+                        onTap: _openBackgroundSheet,
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -247,8 +615,7 @@ class _ChoosePageScreenState extends State<ChoosePageScreen> {
                       child: _buildTabButton(
                         icon: Icons.text_fields,
                         label: 'Writing',
-                        isActive: _activeSheet == 2,
-                        onTap: () => setState(() => _activeSheet = _activeSheet == 2 ? 0 : 2),
+                        onTap: _openWritingSheet,
                       ),
                     ),
                   ],
@@ -260,8 +627,7 @@ class _ChoosePageScreenState extends State<ChoosePageScreen> {
                       child: _buildTabButton(
                         icon: Icons.palette_outlined,
                         label: 'Pen Color',
-                        isActive: _activeSheet == 3,
-                        onTap: () => setState(() => _activeSheet = _activeSheet == 3 ? 0 : 3),
+                        onTap: _openPenColorSheet,
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -269,8 +635,7 @@ class _ChoosePageScreenState extends State<ChoosePageScreen> {
                       child: _buildTabButton(
                         icon: Icons.phone_android,
                         label: 'Effects',
-                        isActive: _activeSheet == 4,
-                        onTap: () => setState(() => _activeSheet = _activeSheet == 4 ? 0 : 4),
+                        onTap: _openEffectsSheet,
                       ),
                     ),
                   ],
@@ -284,11 +649,17 @@ class _ChoosePageScreenState extends State<ChoosePageScreen> {
                       backgroundColor: const Color(0xFF1D4ED8),
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      elevation: 1,
                     ),
                     onPressed: () {
                       final updated = _generateUpdatedDoc();
                       widget.onApply(updated);
-                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => AssignmentPreviewScreen(doc: updated),
+                        ),
+                      );
                     },
                     child: const Text(
                       'Save Changes',
@@ -307,7 +678,6 @@ class _ChoosePageScreenState extends State<ChoosePageScreen> {
   Widget _buildTabButton({
     required IconData icon,
     required String label,
-    required bool isActive,
     required VoidCallback onTap,
   }) {
     return InkWell(
@@ -316,10 +686,10 @@ class _ChoosePageScreenState extends State<ChoosePageScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
-          color: isActive ? const Color(0xFFEEF2FF) : Colors.white,
+          color: Colors.white,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: isActive ? const Color(0xFF2563EB) : const Color(0xFFCBD5E1),
+            color: const Color(0xFFCBD5E1),
             width: 1.5,
           ),
         ),
@@ -332,296 +702,12 @@ class _ChoosePageScreenState extends State<ChoosePageScreen> {
               label,
               style: const TextStyle(
                 color: Color(0xFF1E3A8A),
-                fontWeight: FontWeight.w600,
-                fontSize: 15,
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
               ),
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildActiveSheet() {
-    return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: Color(0xFFCBD5E1))),
-      ),
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                _activeSheet == 1
-                    ? 'Background'
-                    : _activeSheet == 2
-                        ? 'Writing'
-                        : _activeSheet == 3
-                            ? 'Pen Color'
-                            : 'Effects',
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF1E293B)),
-              ),
-              IconButton(
-                icon: const Icon(Icons.close, size: 20, color: Color(0xFF1E293B)),
-                onPressed: () => setState(() => _activeSheet = 0),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-
-          // 1. Background Picker (Horizontal)
-          if (_activeSheet == 1)
-            SizedBox(
-              height: 110,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                itemCount: PaperTemplateOption.allPapers.length,
-                itemBuilder: (ctx, i) {
-                  final p = PaperTemplateOption.allPapers[i];
-                  final isSelected = _selectedPaper == p.assetPath;
-                  return GestureDetector(
-                    onTap: () => setState(() => _selectedPaper = p.assetPath),
-                    child: Container(
-                      width: 80,
-                      margin: const EdgeInsets.only(right: 12),
-                      decoration: BoxDecoration(
-                        border: Border.all(
-                          color: isSelected ? const Color(0xFF10B981) : const Color(0xFFCBD5E1),
-                          width: isSelected ? 2.5 : 1,
-                        ),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(4),
-                        child: Stack(
-                          children: [
-                            Image.asset(p.assetPath, fit: BoxFit.fill, width: 80, height: 110),
-                            if (isSelected)
-                              const Positioned(
-                                top: 4,
-                                right: 4,
-                                child: Icon(Icons.check_circle, color: Color(0xFF10B981), size: 20),
-                              ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-
-          // 2. Writing Font Picker (Horizontal)
-          if (_activeSheet == 2)
-            SizedBox(
-              height: 70,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                itemCount: HandwritingFontOption.allFonts.length,
-                itemBuilder: (ctx, i) {
-                  final f = HandwritingFontOption.allFonts[i];
-                  final isSelected = _selectedFont == f.fontFamily;
-                  return GestureDetector(
-                    onTap: () => setState(() => _selectedFont = f.fontFamily),
-                    child: Container(
-                      width: 120,
-                      margin: const EdgeInsets.only(right: 12),
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: isSelected ? const Color(0xFF10B981) : const Color(0xFFCBD5E1),
-                          width: isSelected ? 2.5 : 1,
-                        ),
-                      ),
-                      alignment: Alignment.center,
-                      child: Stack(
-                        children: [
-                          Center(
-                            child: Text(
-                              'Demo Text',
-                              style: TextStyle(
-                                fontFamily: f.fontFamily,
-                                fontSize: 16,
-                                color: const Color(0xFF1E3A8A),
-                              ),
-                            ),
-                          ),
-                          if (isSelected)
-                            const Positioned(
-                              top: 0,
-                              right: 0,
-                              child: Icon(Icons.check_circle, color: Color(0xFF10B981), size: 16),
-                            ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-
-          // 3. Pen Color Picker (Question vs Answer Tabs)
-          if (_activeSheet == 3) ...[
-            Row(
-              children: [
-                Expanded(
-                  child: InkWell(
-                    onTap: () => setState(() => _colorTab = 0),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      decoration: BoxDecoration(
-                        border: Border(
-                          bottom: BorderSide(
-                            color: _colorTab == 0 ? const Color(0xFF2563EB) : Colors.transparent,
-                            width: 2.5,
-                          ),
-                        ),
-                      ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        'Question',
-                        style: TextStyle(
-                          color: _colorTab == 0 ? const Color(0xFF2563EB) : Colors.grey.shade600,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                Expanded(
-                  child: InkWell(
-                    onTap: () => setState(() => _colorTab = 1),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      decoration: BoxDecoration(
-                        border: Border(
-                          bottom: BorderSide(
-                            color: _colorTab == 1 ? const Color(0xFF2563EB) : Colors.transparent,
-                            width: 2.5,
-                          ),
-                        ),
-                      ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        'Answer',
-                        style: TextStyle(
-                          color: _colorTab == 1 ? const Color(0xFF2563EB) : Colors.grey.shade600,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: _inkPalette.map((col) {
-                final currentTarget = _colorTab == 0 ? _selectedQColor : _selectedAColor;
-                final isSelected = currentTarget == col.toARGB32();
-                return GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      if (_colorTab == 0) {
-                        _selectedQColor = col.toARGB32();
-                      } else {
-                        _selectedAColor = col.toARGB32();
-                      }
-                    });
-                  },
-                  child: Container(
-                    width: 38,
-                    height: 38,
-                    decoration: BoxDecoration(
-                      color: col,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.2),
-                          blurRadius: 4,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: isSelected
-                        ? const Icon(Icons.check, color: Colors.white, size: 22)
-                        : null,
-                  ),
-                );
-              }).toList(),
-            ),
-          ],
-
-          // 4. Effects Picker (Mobile Shadow Toggle with Checkmark)
-          if (_activeSheet == 4)
-            Center(
-              child: GestureDetector(
-                onTap: () {
-                  setState(() => _hasMobileShadow = !_hasMobileShadow);
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: _hasMobileShadow ? const Color(0xFF10B981) : const Color(0xFFCBD5E1),
-                      width: _hasMobileShadow ? 2.5 : 1,
-                    ),
-                  ),
-                  child: Column(
-                    children: [
-                      Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          Image.asset(
-                            'assets/images/PH.jpg',
-                            width: 64,
-                            height: 72,
-                            fit: BoxFit.contain,
-                            errorBuilder: (ctx, err, stack) => const Icon(Icons.phone_android, size: 50, color: Colors.blue),
-                          ),
-                          if (_hasMobileShadow)
-                            const Icon(Icons.check_circle, color: Color(0xFF10B981), size: 28),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'Mobile Shadow',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: _hasMobileShadow ? const Color(0xFF10B981) : const Color(0xFF1E293B),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-
-          const SizedBox(height: 14),
-          SizedBox(
-            width: double.infinity,
-            height: 44,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF10B981),
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              ),
-              onPressed: () => setState(() => _activeSheet = 0),
-              child: const Text('Apply', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            ),
-          ),
-        ],
       ),
     );
   }

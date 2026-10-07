@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/assignment_doc.dart';
 import '../services/local_storage_service.dart';
-import '../services/pdf_export_service.dart';
 import 'choose_page_screen.dart';
 
 class CreateGeneralDocumentScreen extends StatefulWidget {
@@ -228,7 +227,6 @@ class _CreateGeneralDocumentScreenState extends State<CreateGeneralDocumentScree
                               _hasMobileShadow = updated.hasMobileShadow;
                             });
                             await LocalStorageService.saveDoc(updated);
-                            await PdfExportService.printOrSharePdf(updated);
                           },
                         ),
                       ),
