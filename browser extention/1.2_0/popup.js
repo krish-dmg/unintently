@@ -98,8 +98,8 @@
       const data = await chrome.storage.local.get(["conversationDataList", "workerApiUrl"]);
       const list = Array.isArray(data.conversationDataList) ? data.conversationDataList : [];
 
-      if (workerUrlInput && data.workerApiUrl) {
-        workerUrlInput.value = data.workerApiUrl;
+      if (workerUrlInput) {
+        workerUrlInput.value = data.workerApiUrl || "https://unintently-backend.brksmartkraft.workers.dev";
       }
 
       countBadgeEl.textContent = list.length;

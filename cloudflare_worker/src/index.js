@@ -1,7 +1,7 @@
 /**
- * Unintently Cloudflare Worker
+ * Unintently Cloudflare Worker Backend
  * Version: 2.0.0
- * Provides AI assignment generation and ChatGPT extension sync endpoints.
+ * Zero-cost Cloudflare service for ChatGPT assignment synchronization and AI generation.
  */
 
 const inMemoryAssignments = new Map();
@@ -32,12 +32,12 @@ export default {
     // Health check endpoint
     if (url.pathname === '/' || url.pathname === '/health') {
       return new Response(
-        JSON.stringify({ status: 'ok', name: 'Unintently AI & Sync Worker', version: '2.0.0' }),
+        JSON.stringify({ status: 'ok', name: 'Unintently Cloudflare Backend', version: '2.0.0' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // AI Assignment Generation Endpoint
+    // AI Assignment Generation Endpoint (Llama 3)
     if (url.pathname === '/api/generate' && request.method === 'POST') {
       try {
         const body = await request.json();
@@ -53,7 +53,6 @@ export default {
           );
         }
 
-        // Run Cloudflare Workers AI model (Meta Llama 3 8B Instruct)
         let generatedText = '';
         if (env.AI) {
           const aiResponse = await env.AI.run('@cf/meta/llama-3-8b-instruct', {
@@ -65,7 +64,7 @@ export default {
           });
           generatedText = aiResponse.response || '';
         } else {
-          generatedText = `[Offline Mode] Generated answer for: "${prompt}"`;
+          generatedText = `Generated answer for: "${prompt}"`;
         }
 
         return new Response(
@@ -95,25 +94,28 @@ export default {
           createdAt: Date.now(),
         };
 
-        // Persist to KV if bound, otherwise in-memory map
+        // Persist to KV for 30 days
         if (env.ASSIGNMENTS) {
-          await env.ASSIGNMENTS.put(shortCode, JSON.stringify(record), { expirationTtl: 86400 * 7 });
+          await env.ASSIGNMENTS.put(shortCode, JSON.stringify(record), { expirationTtl: 86400 * 30 });
         } else {
           inMemoryAssignments.set(shortCode, record);
-          // Keep in-memory cache pruned
-          if (inMemoryAssignments.size > 200) {
+          if (inMemoryAssignments.size > 500) {
             const oldestKey = inMemoryAssignments.keys().next().value;
             inMemoryAssignments.delete(oldestKey);
           }
         }
 
+        const shortLink = `https://${url.host}/a/${shortCode}`;
+        const syncUrl = `https://${url.host}/assignments/${shortCode}`;
+
         return new Response(
           JSON.stringify({
             success: true,
-            shortLink: shortCode,
             id: shortCode,
             code: shortCode,
-            message: 'Assignment synced successfully',
+            shortLink: shortLink,
+            syncUrl: syncUrl,
+            message: 'Assignment synced successfully to Unintently Cloudflare services',
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
@@ -125,7 +127,135 @@ export default {
       }
     }
 
-    // Retrieve Synced Assignment by Code or ID
+    // Web landing page for scanning link: /a/:code
+    const webMatch = url.pathname.match(/^\/a\/([A-Za-z0-9_-]+)$/);
+    if (webMatch && request.method === 'GET') {
+      const code = webMatch[1];
+      let record = null;
+      if (env.ASSIGNMENTS) {
+        const s = await env.ASSIGNMENTS.get(code);
+        if (s) record = JSON.parse(s);
+      } else {
+        record = inMemoryAssignments.get(code) || null;
+      }
+
+      const title = record?.data?.title || 'ChatGPT Assignment';
+      const count = record?.data?.items?.length || 1;
+
+      const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>${escapeHtml(title)} - Unintently</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 24px 16px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: #0f172a;
+      color: #f8fafc;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      box-sizing: border-box;
+    }
+    .card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 16px;
+      padding: 32px 24px;
+      max-width: 440px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+    }
+    .badge {
+      display: inline-block;
+      background: rgba(0, 87, 210, 0.2);
+      color: #60a5fa;
+      padding: 4px 12px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      margin-bottom: 16px;
+      text-transform: uppercase;
+    }
+    h1 {
+      margin: 0 0 8px 0;
+      font-size: 22px;
+      font-weight: 700;
+      color: #ffffff;
+      word-break: break-word;
+    }
+    p {
+      margin: 0 0 24px 0;
+      font-size: 14px;
+      color: #94a3b8;
+      line-height: 1.5;
+    }
+    .code-box {
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 10px;
+      padding: 12px;
+      font-family: monospace;
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: #38bdf8;
+      margin-bottom: 24px;
+    }
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 14px;
+      border-radius: 10px;
+      border: none;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      box-sizing: border-box;
+      transition: background 0.2s ease;
+      margin-bottom: 10px;
+    }
+    .btn-primary {
+      background: #0057d2;
+      color: #ffffff;
+    }
+    .btn-primary:hover {
+      background: #0045a8;
+    }
+    .btn-secondary {
+      background: #334155;
+      color: #f8fafc;
+    }
+    .btn-secondary:hover {
+      background: #475569;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="badge">Unintently v2</div>
+    <h1>${escapeHtml(title)}</h1>
+    <p>Your handwritten assignment is ready to open on mobile.</p>
+    <div class="code-box">${escapeHtml(code)}</div>
+    <a href="unintently://assignment?code=${encodeURIComponent(code)}" class="btn btn-primary">Open in Unintently App</a>
+    <a href="/assignments/${encodeURIComponent(code)}" class="btn btn-secondary">View Assignment JSON</a>
+  </div>
+</body>
+</html>`;
+
+      return new Response(html, {
+        headers: { 'Content-Type': 'text/html; charset=utf-8' },
+      });
+    }
+
+    // Retrieve Synced Assignment by Code or ID: /assignments/:code
     const getMatch = url.pathname.match(/^\/(?:assignments|api\/assignments)\/([A-Za-z0-9_-]+)$/);
     if (getMatch && request.method === 'GET') {
       const code = getMatch[1];
@@ -161,3 +291,13 @@ export default {
     return new Response('Not Found', { status: 404, headers: corsHeaders });
   },
 };
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}

@@ -285,51 +285,33 @@
       let shortLink = "";
       let isCloudSynced = false;
 
-      // 1. Primary: Try original backend (api.intently.in) which generates authentic intently.page.link shortlinks
+      // Primary: Use Unintently Cloudflare Worker backend
       try {
-        const res = await fetch("https://api.intently.in/create/chatGPTAssignments", {
+        const storageData = await chrome.storage.local.get(["workerApiUrl"]);
+        const workerUrl = storageData.workerApiUrl || "https://unintently-backend.brksmartkraft.workers.dev";
+
+        const res = await fetch(workerUrl.replace(/\/$/, "") + "/create/chatGPTAssignments", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(legacyPayload),
+          body: JSON.stringify(assignmentDoc),
           signal: AbortSignal.timeout(4000)
         });
+
         if (res.ok) {
           const data = await res.json();
-          if (data.shortLink) {
-            shortLink = data.shortLink;
+          if (data.shortLink || data.code) {
+            shortLink = data.shortLink || `${workerUrl.replace(/\/$/, "")}/a/${data.code}`;
             isCloudSynced = true;
           }
         }
       } catch (err) {
-        console.warn("[Unintently] Primary backend fallback:", err?.message);
+        console.warn("[Unintently] Cloudflare Worker sync error:", err?.message);
       }
 
-      // 2. Secondary: If primary fails, try Cloudflare Worker
-      if (!shortLink) {
-        try {
-          const storageData = await chrome.storage.local.get(["workerApiUrl"]);
-          const workerUrl = storageData.workerApiUrl || "http://localhost:8787";
-          const res = await fetch(workerUrl.replace(/\/$/, "") + "/create/chatGPTAssignments", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(assignmentDoc),
-            signal: AbortSignal.timeout(2500)
-          });
-          if (res.ok) {
-            const data = await res.json();
-            if (data.shortLink || data.id) {
-              const code = data.shortLink || data.id;
-              shortLink = `https://unintently.page.link/${code}`;
-              isCloudSynced = true;
-            }
-          }
-        } catch (_) {}
-      }
-
-      // 3. Fallback: Offline local link
+      // Fallback: Offline local link
       if (!shortLink) {
         const localCode = "UNIN-" + Math.random().toString(36).substring(2, 8).toUpperCase();
-        shortLink = `https://unintently.page.link/${localCode}`;
+        shortLink = `https://unintently-backend.brksmartkraft.workers.dev/a/${localCode}`;
       }
 
       // Persist in extension history

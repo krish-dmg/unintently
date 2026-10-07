@@ -2,11 +2,11 @@ name = "unintently-backend"
 main = "src/index.js"
 compatibility_date = "2024-04-05"
 
-# Zero-cost Cloudflare AI binding
+# Cloudflare Workers AI binding (Llama 3)
 [ai]
 binding = "AI"
 
-# Optional R2 bucket for shared assignments
-# [[r2_buckets]]
-# binding = "ASSIGNMENTS_BUCKET"
-# bucket_name = "unintently-assignments"
+# Persistent KV namespace for Unintently assignments and notes
+[[kv_namespaces]]
+binding = "ASSIGNMENTS"
+id = "8780c3fe586b4fce882d30e0df07b277"

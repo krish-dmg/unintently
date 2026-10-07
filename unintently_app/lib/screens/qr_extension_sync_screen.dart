@@ -133,15 +133,19 @@ class _QrExtensionSyncScreenState extends State<QrExtensionSyncScreen>
         doc = await _fetchFromFirestore(text);
       }
 
-      // 5. Check if input is a sync code or remote worker URL
-      if (doc == null && !text.startsWith('{') && (text.startsWith('UNIN-') || text.startsWith('http'))) {
+      // 5. Check if input is a sync code or Cloudflare Worker URL
+      if (doc == null && !text.startsWith('{') && (text.startsWith('UNIN-') || text.startsWith('http') || text.startsWith('unintently://'))) {
         String code = text;
-        if (text.startsWith('http')) {
+        if (text.contains('code=')) {
+          final uri = Uri.tryParse(text);
+          code = uri?.queryParameters['code'] ?? code;
+        } else if (text.startsWith('http')) {
           final uri = Uri.tryParse(text);
           code = uri?.pathSegments.isNotEmpty == true ? uri!.pathSegments.last : text;
         }
 
         final candidateUrls = [
+          'https://unintently-backend.brksmartkraft.workers.dev/assignments/$code',
           'http://10.0.2.2:8787/assignments/$code',
           'http://localhost:8787/assignments/$code',
         ];
@@ -152,7 +156,12 @@ class _QrExtensionSyncScreenState extends State<QrExtensionSyncScreen>
             if (res.statusCode == 200) {
               final body = json.decode(res.body);
               if (body is Map && body.containsKey('assignment')) {
-                text = json.encode(body['assignment']);
+                final aMap = body['assignment'];
+                if (aMap is Map<String, dynamic>) {
+                  doc = AssignmentDoc.fromMap(aMap);
+                } else if (aMap is Map) {
+                  doc = AssignmentDoc.fromMap(Map<String, dynamic>.from(aMap));
+                }
                 break;
               }
             }

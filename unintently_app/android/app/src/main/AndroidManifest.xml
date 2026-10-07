@@ -28,13 +28,12 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
-            <!-- Authentic Intently and Unintently Deep Link Intent Filters -->
+            <!-- Unintently Deep Link Intent Filters -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.BROWSABLE"/>
-                <data android:host="intently.page.link" android:scheme="https"/>
-                <data android:host="intently.page.link" android:scheme="http"/>
+                <data android:host="unintently-backend.brksmartkraft.workers.dev" android:scheme="https"/>
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.VIEW"/>
