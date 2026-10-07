@@ -1,0 +1,12 @@
+name = "unintently-backend"
+main = "src/index.js"
+compatibility_date = "2024-04-05"
+
+# Zero-cost Cloudflare AI binding
+[ai]
+binding = "AI"
+
+# Optional R2 bucket for shared assignments
+# [[r2_buckets]]
+# binding = "ASSIGNMENTS_BUCKET"
+# bucket_name = "unintently-assignments"
