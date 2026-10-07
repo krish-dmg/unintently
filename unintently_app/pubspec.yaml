@@ -2,7 +2,7 @@ name: unintently
 description: "Unintently v2 - Free, Open-Source AI-Powered Text-to-Handwriting & Assignment Generator."
 publish_to: 'none'
 
-version: 2.0.0+1
+version: 2.1.0+2
 
 environment:
   sdk: ^3.13.5
@@ -33,17 +33,18 @@ flutter:
   assets:
     - assets/images/
     - assets/branding/
+    - assets/fonts/
 
   fonts:
     - family: Writing1
       fonts:
-        - asset: assets/fonts/Writing1.otf
+        - asset: assets/fonts/Writing1.ttf
     - family: Writing2
       fonts:
-        - asset: assets/fonts/Writing2.otf
+        - asset: assets/fonts/Writing2.ttf
     - family: Writing3
       fonts:
-        - asset: assets/fonts/Writing3.otf
+        - asset: assets/fonts/Writing3.ttf
     - family: Writing4
       fonts:
         - asset: assets/fonts/Writing4.ttf
@@ -52,16 +53,16 @@ flutter:
         - asset: assets/fonts/Writing5.ttf
     - family: Writing7
       fonts:
-        - asset: assets/fonts/Writing7.otf
+        - asset: assets/fonts/Writing7.ttf
     - family: Writing8
       fonts:
         - asset: assets/fonts/Writing8.ttf
     - family: intentlyR1
       fonts:
-        - asset: assets/fonts/intentlyR1.otf
+        - asset: assets/fonts/intentlyR1.ttf
     - family: intentlyR2
       fonts:
-        - asset: assets/fonts/intentlyR2.otf
+        - asset: assets/fonts/intentlyR2.ttf
     - family: intentlyR8
       fonts:
         - asset: assets/fonts/intentlyR8.ttf

@@ -57,15 +57,15 @@ class PdfExportService {
   static Future<Uint8List> generatePdf(AssignmentDoc doc) async {
     final pdf = pw.Document();
 
-    // 1. Load Handwriting Font
+    // 1. Load Handwriting Font (prefer TTF for accurate vector glyph metrics)
     pw.Font handwritingFont;
     try {
-      handwritingFont = await fontFromAssetBundle('assets/fonts/${doc.fontFamily}.otf');
+      handwritingFont = await fontFromAssetBundle('assets/fonts/${doc.fontFamily}.ttf');
     } catch (_) {
       try {
-        handwritingFont = await fontFromAssetBundle('assets/fonts/${doc.fontFamily}.ttf');
+        handwritingFont = await fontFromAssetBundle('assets/fonts/${doc.fontFamily}.otf');
       } catch (_) {
-        handwritingFont = await fontFromAssetBundle('assets/fonts/intentlyR1.otf');
+        handwritingFont = await fontFromAssetBundle('assets/fonts/intentlyR1.ttf');
       }
     }
 

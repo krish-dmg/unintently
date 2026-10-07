@@ -138,5 +138,36 @@ void main() {
     expect(bytes[1], 0x50); // 'P'
     expect(bytes[2], 0x44); // 'D'
     expect(bytes[3], 0x46); // 'F'
+
+    // Verify PDF does NOT have all-zero font widths array
+    final rawPdf = String.fromCharCodes(bytes);
+    expect(rawPdf.contains('/Widths [0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0'), false);
+  });
+
+  test('PdfExportService generates valid multi-page PDF for all converted fonts without character overlap', () async {
+    const fontsToTest = ['intentlyR1', 'intentlyR2', 'Writing1', 'Writing2', 'Writing3', 'Writing7'];
+    for (final font in fontsToTest) {
+      final doc = AssignmentDoc(
+        id: 'test-font-$font',
+        title: 'Compare Nations League Difficulty',
+        heading: 'Football Analysis',
+        items: List.generate(
+          10,
+          (i) => QAItem(
+            question: 'Question $i: Why is the Nations League format structured this way?',
+            answer: 'Answer $i: It replaces friendly matches with competitive fixtures across divisions A through D with promotions and relegations.',
+          ),
+        ),
+        paperAsset: 'assets/images/ruled5.jpg',
+        fontFamily: font,
+      );
+
+      final bytes = await PdfExportService.generatePdf(doc);
+      expect(bytes.isNotEmpty, true);
+      final rawPdf = String.fromCharCodes(bytes);
+      // Ensure character advance metrics are present and non-zero
+      expect(rawPdf.contains('/Widths [0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0'), false,
+          reason: 'Font $font generated all-zero widths');
+    }
   });
 }
