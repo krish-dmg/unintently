@@ -1,9 +1,10 @@
 /**
  * Unintently Chrome Extension - Content Script Styles
  * Version: 2.0.0
+ * Matches the reference design with high polish and zero emojis.
  */
 
-/* Injected Trigger Button */
+/* Injected Trigger Button inside ChatGPT composer */
 .unintently-trigger-btn {
   display: inline-flex;
   align-items: center;
@@ -79,9 +80,9 @@
 .unintently-overlay {
   position: fixed;
   inset: 0;
-  background-color: rgba(15, 23, 42, 0.65);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  background-color: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -96,265 +97,195 @@
 }
 
 @keyframes unintentlyScaleUp {
-  from { opacity: 0; transform: scale(0.95); }
+  from { opacity: 0; transform: scale(0.96); }
   to { opacity: 1; transform: scale(1); }
 }
 
-/* Modal Container */
-.unintently-modal {
+/* Modal Card Dialog - Exactly matching original screenshot */
+.unintently-modal-dialog {
   background-color: #ffffff;
-  color: #1e293b;
+  color: #000000;
   width: 100%;
-  max-width: 480px;
+  max-width: 440px;
   border-radius: 16px;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
-  border: 1px solid #e2e8f0;
-  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.22);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  padding: 24px 28px;
   display: flex;
   flex-direction: column;
-  animation: unintentlyScaleUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  align-items: center;
+  position: relative;
+  text-align: center;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  animation: unintentlyScaleUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Modal Header */
-.unintently-modal-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 20px;
-  border-bottom: 1px solid #f1f5f9;
-}
-
-.unintently-brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.unintently-brand-icon {
-  width: 28px;
-  height: 28px;
-  background: #0057d2;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #ffffff;
-}
-
-.unintently-brand-icon svg {
-  width: 16px;
-  height: 16px;
-}
-
-.unintently-brand-title {
-  font-size: 16px;
-  font-weight: 700;
-  color: #0f172a;
-}
-
-.unintently-brand-version {
-  font-size: 11px;
-  font-weight: 700;
-  color: #0057d2;
-  background: #eff6ff;
-  padding: 2px 6px;
-  border-radius: 4px;
-}
-
-.unintently-close-btn {
+/* Close Icon on Top Right */
+.unintently-modal-close-btn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
   background: transparent;
   border: none;
   cursor: pointer;
-  color: #64748b;
-  border-radius: 8px;
+  color: #6b7280;
   padding: 6px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.15s ease;
 }
 
-.unintently-close-btn:hover {
-  background-color: #f1f5f9;
-  color: #0f172a;
+.unintently-modal-close-btn:hover {
+  background-color: #f3f4f6;
+  color: #111827;
 }
 
-.unintently-close-btn svg {
-  width: 20px;
-  height: 20px;
+.unintently-modal-close-btn svg {
+  width: 18px;
+  height: 18px;
 }
 
-/* Modal Body */
-.unintently-modal-body {
-  padding: 20px;
+/* Modal Typography */
+.unintently-modal-brand-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #0057d2;
+  margin-bottom: 2px;
+}
+
+.unintently-modal-heading {
+  font-size: 17px;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 4px;
+}
+
+.unintently-modal-subtitle {
+  font-size: 13px;
+  color: #6b7280;
+  font-weight: 400;
+  margin-bottom: 16px;
+}
+
+/* QR Canvas Container */
+.unintently-qr-box {
+  background-color: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  border-radius: 12px;
+  padding: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   display: flex;
-  flex-direction: column;
   align-items: center;
-  text-align: center;
+  justify-content: center;
+  margin-bottom: 18px;
 }
 
-.unintently-doc-title {
-  font-size: 15px;
-  font-weight: 600;
-  color: #1e293b;
-  margin: 0 0 8px 0;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.unintently-qr-box canvas {
+  display: block;
+}
+
+/* Horizontal Separator */
+.unintently-divider-row {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  margin-bottom: 12px;
+}
+
+.unintently-divider-line {
+  flex: 1;
+  height: 1px;
+  background-color: #e5e7eb;
+}
+
+.unintently-divider-label {
+  padding: 0 10px;
+  font-size: 12px;
+  color: #6b7280;
   white-space: nowrap;
 }
 
-.unintently-badge-row {
+/* Link Box */
+.unintently-link-box {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 16px;
-}
-
-.unintently-badge {
-  font-size: 12px;
-  font-weight: 600;
-  background-color: #f0fdf4;
-  color: #166534;
-  border: 1px solid #bbf7d0;
-  border-radius: 9999px;
-  padding: 3px 10px;
-}
-
-.unintently-badge-secondary {
-  font-size: 12px;
-  font-weight: 500;
-  background-color: #f8fafc;
-  color: #475569;
-  border: 1px solid #e2e8f0;
-  border-radius: 9999px;
-  padding: 3px 10px;
-}
-
-/* QR Card Wrapper */
-.unintently-qr-card {
-  background-color: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 12px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 16px;
-  min-width: 220px;
-  min-height: 220px;
-}
-
-.unintently-qr-card canvas {
-  display: block;
-  border-radius: 4px;
-}
-
-/* Sync Code Box */
-.unintently-code-box {
   width: 100%;
-  display: flex;
-  gap: 8px;
-  margin-bottom: 16px;
+  border: 1.5px solid #d1d5db;
+  border-radius: 8px;
+  background-color: #f9fafb;
+  overflow: hidden;
+  margin-bottom: 14px;
 }
 
-.unintently-code-input {
+.unintently-link-text {
   flex: 1;
-  background-color: #f8fafc;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
   padding: 8px 12px;
   font-size: 13px;
-  color: #334155;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  outline: none;
+  color: #1f2937;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  user-select: all;
 }
 
-.unintently-copy-small-btn {
-  background-color: #f1f5f9;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  padding: 8px 14px;
-  font-size: 13px;
-  font-weight: 600;
-  color: #334155;
+.unintently-link-copy-btn {
+  background: transparent;
+  border: none;
+  border-left: 1px solid #e5e7eb;
+  padding: 8px 12px;
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
+  color: #4b5563;
   transition: all 0.15s ease;
 }
 
-.unintently-copy-small-btn:hover {
-  background-color: #e2e8f0;
-  color: #0f172a;
+.unintently-link-copy-btn:hover {
+  background-color: #f3f4f6;
+  color: #0057d2;
 }
 
-/* Action Buttons */
-.unintently-actions {
+.unintently-link-copy-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Secondary Payload Button */
+.unintently-secondary-action {
   width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
 }
 
-.unintently-btn-primary {
+.unintently-btn-payload {
   width: 100%;
   background-color: #0057d2;
   color: #ffffff;
   border: none;
   border-radius: 8px;
-  padding: 10px 16px;
-  font-size: 14px;
+  padding: 9px 14px;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 6px;
   transition: all 0.15s ease;
-  box-shadow: 0 1px 2px rgba(0, 87, 210, 0.2);
 }
 
-.unintently-btn-primary:hover {
+.unintently-btn-payload:hover {
   background-color: #0044a5;
-  box-shadow: 0 2px 6px rgba(0, 87, 210, 0.35);
 }
 
-.unintently-btn-primary svg {
-  width: 18px;
-  height: 18px;
-}
-
-.unintently-btn-success {
+.unintently-btn-payload.copied {
   background-color: #16a34a !important;
 }
 
-/* Instructions */
-.unintently-instructions {
-  margin-top: 14px;
-  background-color: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  padding: 10px 14px;
-  width: 100%;
-  text-align: left;
-}
-
-.unintently-instructions-title {
-  font-size: 12px;
-  font-weight: 700;
-  color: #475569;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  margin-bottom: 4px;
-}
-
-.unintently-instructions-text {
-  font-size: 12px;
-  color: #64748b;
-  line-height: 1.4;
-  margin: 0;
+.unintently-btn-payload svg {
+  width: 16px;
+  height: 16px;
 }

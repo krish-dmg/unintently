@@ -315,7 +315,7 @@
   }
 
   /**
-   * In-page modal dialog rendering
+   * In-page modal dialog rendering - Matches screenshot reference
    */
   function showModalDialog(data) {
     const existing = document.getElementById(MODAL_ID);
@@ -326,58 +326,46 @@
     overlay.className = "unintently-overlay";
 
     const jsonString = JSON.stringify(data.assignmentDoc, null, 2);
-    const compactSyncValue = data.isCloudSynced
-      ? data.syncCode
+    const shareUrl = data.isCloudSynced
+      ? `http://localhost:8787/assignments/${data.syncCode}`
+      : `https://intently.page.link/${data.syncCode}`;
+
+    // For QR code: if cloud synced, encode the sync link; otherwise encode self-contained payload URL
+    const qrData = data.isCloudSynced
+      ? shareUrl
       : `unintently://payload?data=${encodeURIComponent(JSON.stringify(data.assignmentDoc))}`;
 
     overlay.innerHTML = `
-      <div class="unintently-modal" role="dialog" aria-modal="true">
-        <div class="unintently-modal-header">
-          <div class="unintently-brand">
-            <div class="unintently-brand-icon">
-              ${ICONS.doc}
-            </div>
-            <div class="unintently-brand-title">Unintently v2</div>
-            <span class="unintently-brand-version">Extension</span>
-          </div>
-          <button class="unintently-close-btn" id="unintently-close-modal" aria-label="Close dialog">
-            ${ICONS.close}
+      <div class="unintently-modal-dialog" role="dialog" aria-modal="true">
+        <button class="unintently-modal-close-btn" id="unintently-close-modal" aria-label="Close dialog">
+          ${ICONS.close}
+        </button>
+
+        <div class="unintently-modal-brand-title">Intently</div>
+        <div class="unintently-modal-heading">Scan QR</div>
+        <div class="unintently-modal-subtitle">Scan this on mobile to open assignment</div>
+
+        <div class="unintently-qr-box">
+          <canvas id="unintently-qr-canvas" width="200" height="200"></canvas>
+        </div>
+
+        <div class="unintently-divider-row">
+          <div class="unintently-divider-line"></div>
+          <span class="unintently-divider-label">or share this assignment link</span>
+          <div class="unintently-divider-line"></div>
+        </div>
+
+        <div class="unintently-link-box">
+          <div class="unintently-link-text" id="unintently-link-val">${escapeHtml(shareUrl)}</div>
+          <button type="button" class="unintently-link-copy-btn" id="unintently-copy-link-btn" title="Copy Link">
+            ${ICONS.copy}
           </button>
         </div>
 
-        <div class="unintently-modal-body">
-          <h3 class="unintently-doc-title" title="${escapeHtml(data.title)}">${escapeHtml(data.title)}</h3>
-          
-          <div class="unintently-badge-row">
-            <span class="unintently-badge">${data.itemCount} Q&A Pairs Extracted</span>
-            <span class="unintently-badge-secondary">${data.isCloudSynced ? "Cloud Synced" : "Offline Ready"}</span>
-          </div>
-
-          <div class="unintently-qr-card">
-            <canvas id="unintently-qr-canvas" width="220" height="220"></canvas>
-          </div>
-
-          <div class="unintently-code-box">
-            <input type="text" class="unintently-code-input" id="unintently-code-input" readonly value="${escapeHtml(data.syncCode)}" />
-            <button type="button" class="unintently-copy-small-btn" id="unintently-copy-code-btn">
-              ${ICONS.copy}<span>Copy Code</span>
-            </button>
-          </div>
-
-          <div class="unintently-actions">
-            <button type="button" class="unintently-btn-primary" id="unintently-copy-json-btn">
-              ${ICONS.copy}<span>Copy Assignment Payload (JSON)</span>
-            </button>
-          </div>
-
-          <div class="unintently-instructions">
-            <div class="unintently-instructions-title">How to import into mobile app:</div>
-            <p class="unintently-instructions-text">
-              1. Open Unintently app on your phone.<br/>
-              2. Open burger menu -> "ChatGPT to Assignment".<br/>
-              3. Scan this QR code or paste the copied payload directly.
-            </p>
-          </div>
+        <div class="unintently-secondary-action">
+          <button type="button" class="unintently-btn-payload" id="unintently-copy-payload-btn">
+            ${ICONS.doc}<span>Copy Assignment Payload (JSON)</span>
+          </button>
         </div>
       </div>
     `;
@@ -387,13 +375,11 @@
     // Render QR Code using standalone UnintentlyQR
     const canvas = document.getElementById("unintently-qr-canvas");
     if (canvas && window.UnintentlyQR) {
-      const qrData = data.isCloudSynced ? data.syncCode : compactSyncValue;
       try {
-        window.UnintentlyQR.toCanvas(canvas, qrData, { width: 220, margin: 2 }, function (err) {
+        window.UnintentlyQR.toCanvas(canvas, qrData, { width: 200, margin: 2 }, function (err) {
           if (err) {
-            console.warn("[Unintently] QR canvas render fallback to code string:", err);
-            // Fallback rendering short syncCode
-            window.UnintentlyQR.toCanvas(canvas, data.syncCode, { width: 220, margin: 2 });
+            console.warn("[Unintently] QR canvas fallback to shareUrl:", err);
+            window.UnintentlyQR.toCanvas(canvas, shareUrl, { width: 200, margin: 2 });
           }
         });
       } catch (qrEx) {
@@ -416,28 +402,28 @@
       }
     });
 
-    // Copy Sync Code button
-    const copyCodeBtn = document.getElementById("unintently-copy-code-btn");
-    copyCodeBtn.addEventListener("click", async () => {
-      const ok = await copyToClipboard(data.syncCode);
+    // Copy Link button
+    const copyLinkBtn = document.getElementById("unintently-copy-link-btn");
+    copyLinkBtn.addEventListener("click", async () => {
+      const ok = await copyToClipboard(shareUrl);
       if (ok) {
-        copyCodeBtn.innerHTML = `${ICONS.check}<span>Copied!</span>`;
+        copyLinkBtn.innerHTML = ICONS.check;
         setTimeout(() => {
-          copyCodeBtn.innerHTML = `${ICONS.copy}<span>Copy Code</span>`;
+          copyLinkBtn.innerHTML = ICONS.copy;
         }, 1500);
       }
     });
 
-    // Copy JSON Payload button
-    const copyJsonBtn = document.getElementById("unintently-copy-json-btn");
-    copyJsonBtn.addEventListener("click", async () => {
+    // Copy Payload button
+    const copyPayloadBtn = document.getElementById("unintently-copy-payload-btn");
+    copyPayloadBtn.addEventListener("click", async () => {
       const ok = await copyToClipboard(jsonString);
       if (ok) {
-        copyJsonBtn.classList.add("unintently-btn-success");
-        copyJsonBtn.innerHTML = `${ICONS.check}<span>Payload Copied to Clipboard!</span>`;
+        copyPayloadBtn.classList.add("copied");
+        copyPayloadBtn.innerHTML = `${ICONS.check}<span>Payload Copied to Clipboard!</span>`;
         setTimeout(() => {
-          copyJsonBtn.classList.remove("unintently-btn-success");
-          copyJsonBtn.innerHTML = `${ICONS.copy}<span>Copy Assignment Payload (JSON)</span>`;
+          copyPayloadBtn.classList.remove("copied");
+          copyPayloadBtn.innerHTML = `${ICONS.doc}<span>Copy Assignment Payload (JSON)</span>`;
         }, 1800);
       }
     });
