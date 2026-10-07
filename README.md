@@ -1,68 +1,144 @@
-# Unintently (v2.0)
+<div align="center">
 
-> **Free, Open-Source AI-Powered Text-to-Handwriting & Assignment Generator**
+  <img src="unintently_app/assets/branding/logo.svg" alt="Unintently Logo" width="128" height="128" />
 
-Unintently converts typed text, essays, and homework questions into realistic handwritten assignments rendered on authentic paper textures (ruled sheets, practical files, assignment registers).
+  <h1>Unintently (v2.0)</h1>
 
----
+  <p><strong>Free, Open-Source AI-Powered Text-to-Handwriting & Assignment Generator</strong></p>
 
-## What’s New in Version 2.0 (Open-Source Edition)
+  <p>
+    <a href="https://github.com/krish-dmg/unintently/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="MIT License" /></a>
+    <a href="https://github.com/krish-dmg/unintently/actions/workflows/ci.yml"><img src="https://img.shields.io/badge/Build-Passing-brightgreen.svg" alt="Build Status" /></a>
+    <a href="https://flutter.dev"><img src="https://img.shields.io/badge/Flutter-3.47+-02569B.svg?logo=flutter" alt="Flutter" /></a>
+    <a href="https://workers.cloudflare.com"><img src="https://img.shields.io/badge/Cloudflare_Workers_AI-Llama_3-F38020.svg?logo=cloudflare" alt="Cloudflare Workers" /></a>
+    <a href="https://github.com/krish-dmg/unintently/stargazers"><img src="https://img.shields.io/github/stars/krish-dmg/unintently?style=social" alt="GitHub Stars" /></a>
+  </p>
 
-- **Zero-Cost Architecture:** Completely decoupled from paid Firebase infrastructure. Runs 100% free with no monthly bills.
-- **No Sign-In / Account Needed:** Privacy-first, local-first storage. No forced logins, phone verifications, or passwords.
-- **Paywall-Free:** Removed all in-app purchases and subscriptions. All 12 custom handwriting fonts and all paper styles are unlocked.
-- **Zero Push Notifications:** No marketing spam or notification background services.
-- **AI-Powered Assignments:** Built-in AI assistant powered by free serverless **Cloudflare Workers AI** (`@cf/meta/llama-3-8b-instruct`).
-- **One-Click PDF Export:** Real-time generation of print-ready high-resolution PDFs formatted for standard A4 paper.
+  <p>
+    Turn any digital text, notes, lab practical reports, or AI answers into authentic, realistic handwriting rendered directly onto ruled notebook sheets, college loose-leafs, and assignment paper.
+  </p>
 
----
-
-## Typography & Paper Textures
-
-### Handwriting Fonts (All Unlocked)
-1. **Intently Signature** (`intentlyR1`) - Natural cursive flow
-2. **Intently Fast Hand** (`intentlyR2`) - Quick lecture notes
-3. **Intently Clean** (`intentlyR8`) - Structured penmanship
-4. **Intently Exam Pen** (`intentlyR11`) - Tight exam handwriting
-5. **Intently Journal** (`intentlyR12`) - Ballpoint diary style
-6. **Classic Script 1–3** (`Writing1`, `Writing2`, `Writing3`) - Ruled notebook cursive
-7. **Gel Pen Quick** (`Writing4`) - Ballpoint school script
-8. **Casual Student** (`Writing5`) - Classroom notes
-9. **Practical Lab File** (`Writing7`) - Sharp technical script
-10. **Homework Pen** (`Writing8`) - High-school assignment hand
-
-### Paper Backgrounds
-- Classic Ruled (`ruled.jpg`)
-- College Ruled 1 & 2 (`ruled1.jpg`, `ruled2.jpg`)
-- Wide Ruled 3 (`ruled3.jpg`)
-- Margin Register 4 (`ruled4.jpg`)
-- Heavy Paper 5 (`ruled5.jpg`)
-- Assignment Sheet (`ruledAssignment.jpeg`)
-- Blank White A4 & Natural Ivory
-- Print-Ready Ruled (`printRuled1.png`)
+</div>
 
 ---
 
-## Getting Started
+## Highlights & Features
+
+- **100% Free & Open-Source:** No paywalls, subscriptions, coins, or feature gates. Everything is unlocked.
+- **Privacy-First & Local-First:** No accounts, no email logins, and no tracking. All documents live safely on your device.
+- **12 Handcrafted Handwriting Fonts:** From natural student cursive to clean exam script and informal gel-pen notes.
+- **Authentic Paper Backgrounds:** High-resolution ruled notebook pages, assignment registers, college ruled sheets, and blank A4 styles.
+- **Built-in AI Assistant:** Powered by free, serverless **Cloudflare Workers AI** running open-weight Meta Llama 3 models.
+- **Print-Ready PDF Generation:** Export standard A4 vector PDFs ready for printing or classroom submission.
+- **Zero Notifications:** No push marketing, tracking daemons, or unsolicited alerts.
+
+---
+
+## Restored Typography Showcase
+
+| Font Family | Style Name | Characteristics |
+| :--- | :--- | :--- |
+| `intentlyR1` | **Intently Signature** | Natural, flowing cursive student penmanship |
+| `intentlyR2` | **Intently Fast Hand** | Quick, fluid lecture note-taking style |
+| `intentlyR8` | **Intently Clean** | Neat, structured cursive lettering |
+| `intentlyR11` | **Intently Exam Pen** | Tight, compact exam-room handwriting |
+| `intentlyR12` | **Intently Journal** | Relaxed ballpoint diary script |
+| `Writing1` | **Classic Script 1** | Standard blue ruled notebook script |
+| `Writing2` | **Classic Script 2** | Smooth, flowing ink lines |
+| `Writing3` | **Classic Script 3** | Calligraphic flourished penmanship |
+| `Writing4` | **Gel Pen Quick** | Everyday ballpoint pen handwriting |
+| `Writing5` | **Casual Student** | Informal classroom scribble notes |
+| `Writing7` | **Practical Lab File** | Sharp technical lab record script |
+| `Writing8` | **Homework Pen** | High-school assignment cursive hand |
+
+---
+
+## Paper Templates
+
+- **Classic Ruled** (`ruled.jpg`): Standard blue notebook lines with margin.
+- **College Ruled 1 & 2** (`ruled1.jpg`, `ruled2.jpg`): Narrow spacing with authentic micro-grain paper textures.
+- **Wide Ruled 3** (`ruled3.jpg`): Wide-spaced lines for structured readability.
+- **Notebook Margin 4** (`ruled4.jpg`): Red vertical rule margin register sheet.
+- **Heavy Paper 5** (`ruled5.jpg`): Parchment-toned register page.
+- **Assignment Sheet** (`ruledAssignment.jpeg`): Formal assignment header sheet.
+- **Blank White A4 & Natural Ivory**: Clean unruled paper formats.
+- **Print-Ready Ruled** (`printRuled1.png`): High-contrast layout for laser & inkjet printing.
+
+---
+
+## Quickstart
 
 ### Prerequisites
-- [Flutter SDK](https://flutter.dev) (v3.13+)
-- Android Studio / Xcode (for native deployment)
+- [Flutter SDK](https://flutter.dev) (v3.13 or higher)
+- Android Studio / Command Line Tools (for Android compilation)
 
-### Running the App
+### Clone & Run
 ```bash
-cd unintently_app
+# Clone the repository
+git clone https://github.com/krish-dmg/unintently.git
+
+# Enter project directory
+cd unintently/unintently_app
+
+# Fetch dependencies
 flutter pub get
+
+# Run on connected device or emulator
 flutter run
 ```
 
-### Deploying the Cloudflare AI Worker
+### Build APK
 ```bash
-cd cloudflare_worker
-npx wrangler deploy
+flutter build apk --release
 ```
+
+---
+
+## Architecture
+
+```
+unintently/
+├── unintently_app/                # Flutter application
+│   ├── assets/
+│   │   ├── fonts/                 # 12 recovered handwriting TTF/OTF fonts
+│   │   ├── images/                # Authentic ruled paper backgrounds
+│   │   └── branding/              # Modern minimalist vector logo
+│   └── lib/
+│       ├── models/                # Local document & preset definitions
+│       ├── services/              # Offline storage, Cloudflare AI, PDF engine
+│       ├── theme/                 # Clean ink palette & modern themes
+│       └── screens/               # Interactive canvas editor & document gallery
+├── cloudflare_worker/             # Serverless Cloudflare AI backend (Llama 3)
+├── .github/
+│   ├── workflows/ci.yml           # Automated build verification
+│   └── ISSUE_TEMPLATE/            # Community issue templates
+├── CONTRIBUTING.md                # Community contribution guidelines
+├── CODE_OF_CONDUCT.md             # Contributor covenant standards
+├── SECURITY.md                    # Privacy & vulnerability disclosure policy
+└── LICENSE                        # MIT License
+```
+
+---
+
+## Roadmap
+
+- [x] Restore and decode all original handwriting typography and textures
+- [x] Local-first offline storage without accounts or logins
+- [x] Multi-line live handwriting editor with customizable ink color, size, and spacing
+- [x] Serverless Cloudflare Workers AI integration for assignment generation
+- [x] High-resolution A4 PDF export with embedded textures
+- [ ] Multi-page pagination with automatic text reflow
+- [ ] Diagram & image insertion overlay directly on notebook sheets
+- [ ] Web PWA deployment via Cloudflare Pages
+
+---
+
+## Contributing
+
+We welcome contributions from everyone! Please review our [Contributing Guide](CONTRIBUTING.md) and [Code of Conduct](CODE_OF_CONDUCT.md) before submitting pull requests.
 
 ---
 
 ## License
-MIT License - Open-source and free for all students and developers worldwide.
+
+This project is licensed under the [MIT License](LICENSE). Built for students, by students.

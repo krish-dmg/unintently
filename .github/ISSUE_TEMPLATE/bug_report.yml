@@ -1,0 +1,51 @@
+name: "Bug Report"
+description: "File a bug or issue report to help improve Unintently"
+title: "[BUG]: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report an issue!
+  - type: input
+    id: version
+    attributes:
+      label: Unintently Version
+      placeholder: "e.g., 2.0.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating System / Platform
+      options:
+        - Android
+        - iOS
+        - Web
+        - macOS / Windows / Linux
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the Bug
+      description: A clear and concise description of what went wrong.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      placeholder: |
+        1. Open 'Create Document'
+        2. Select 'Intently Signature' font
+        3. Tap Export PDF...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What did you expect to happen instead?
+    validations:
+      required: true

@@ -1,0 +1,37 @@
+name: CI / Build Verification
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  analyze_and_test:
+    name: Flutter Analyze & Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Install Dependencies
+        run: |
+          cd unintently_app
+          flutter pub get
+
+      - name: Run Code Analysis
+        run: |
+          cd unintently_app
+          flutter analyze
+
+      - name: Run Widget & Unit Tests
+        run: |
+          cd unintently_app
+          flutter test

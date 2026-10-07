@@ -1,0 +1,28 @@
+name: "Feature Request"
+description: "Suggest a new feature, handwriting font, or paper template"
+title: "[FEATURE]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for suggesting improvements to Unintently!
+  - type: textarea
+    id: feature
+    attributes:
+      label: Feature Description
+      description: What feature, typography style, or paper texture would you like to see?
+    validations:
+      required: true
+  - type: textarea
+    id: use-case
+    attributes:
+      label: Use Case / Context
+      description: How does this help students or creators?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternative Solutions
+      description: Any alternative ways of achieving this you have considered?
