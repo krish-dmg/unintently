@@ -23,34 +23,34 @@ class _CreateGeneralDocumentScreenState extends State<CreateGeneralDocumentScree
   late String _fontFamily;
   late int _questionColor;
   late int _answerColor;
+  late bool _hasMobileShadow;
 
   @override
   void initState() {
     super.initState();
     final d = widget.initialDoc;
     _id = d?.id ?? DateTime.now().millisecondsSinceEpoch.toString();
-    _titleController = TextEditingController(text: d?.title ?? 'General Note');
+    _titleController = TextEditingController(text: d?.title ?? '');
     _headingController = TextEditingController(text: d?.heading ?? '');
-    _contentController = TextEditingController(
-      text: d?.generalContent ??
-          'Write or paste your short document, letter, application, or general homework note here.',
-    );
+    _contentController = TextEditingController(text: d?.generalContent ?? '');
 
     _paperAsset = d?.paperAsset ?? 'assets/images/ruled.jpg';
     _fontFamily = d?.fontFamily ?? 'intentlyR1';
     _questionColor = d?.questionColorValue ?? 0xFF0D47A1;
     _answerColor = d?.answerColorValue ?? 0xFF1A237E;
+    _hasMobileShadow = d?.hasMobileShadow ?? false;
   }
 
   AssignmentDoc _buildDoc() {
     return AssignmentDoc(
       id: _id,
-      title: _titleController.text.trim().isEmpty ? 'General Note' : _titleController.text.trim(),
+      title: _titleController.text.trim().isEmpty ? 'Untitled Note' : _titleController.text.trim(),
       docType: 'general',
       heading: _headingController.text.trim(),
       generalContent: _contentController.text,
       fontFamily: _fontFamily,
       paperAsset: _paperAsset,
+      hasMobileShadow: _hasMobileShadow,
       questionColorValue: _questionColor,
       answerColorValue: _answerColor,
     );
@@ -83,7 +83,11 @@ class _CreateGeneralDocumentScreenState extends State<CreateGeneralDocumentScree
         title: TextField(
           controller: _titleController,
           style: const TextStyle(color: Color(0xFF1E3A8A), fontWeight: FontWeight.bold, fontSize: 18),
-          decoration: const InputDecoration(border: InputBorder.none),
+          decoration: const InputDecoration(
+            hintText: 'Document Title...',
+            hintStyle: TextStyle(color: Colors.grey),
+            border: InputBorder.none,
+          ),
           onChanged: (_) => _saveSilently(),
         ),
         actions: [
@@ -98,7 +102,7 @@ class _CreateGeneralDocumentScreenState extends State<CreateGeneralDocumentScree
               ),
               onPressed: () async {
                 await _saveSilently();
-                if (mounted) {
+                if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Document saved!'), duration: Duration(seconds: 1)),
                   );
@@ -120,7 +124,7 @@ class _CreateGeneralDocumentScreenState extends State<CreateGeneralDocumentScree
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                    border: Border.all(color: const Color(0xFFCBD5E1)),
                   ),
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   child: Column(
@@ -136,9 +140,10 @@ class _CreateGeneralDocumentScreenState extends State<CreateGeneralDocumentScree
                       ),
                       TextField(
                         controller: _headingController,
-                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16, color: Color(0xFF1E293B)),
                         decoration: const InputDecoration(
                           hintText: 'Document title / heading...',
+                          hintStyle: TextStyle(color: Colors.grey),
                           border: InputBorder.none,
                           isDense: true,
                         ),
@@ -156,7 +161,7 @@ class _CreateGeneralDocumentScreenState extends State<CreateGeneralDocumentScree
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                    border: Border.all(color: const Color(0xFFCBD5E1)),
                   ),
                   padding: const EdgeInsets.all(16),
                   child: Column(
@@ -165,7 +170,7 @@ class _CreateGeneralDocumentScreenState extends State<CreateGeneralDocumentScree
                       const Text(
                         'Content',
                         style: TextStyle(
-                          color: Color(0xFF10B981),
+                          color: Color(0xFF059669),
                           fontWeight: FontWeight.bold,
                           fontSize: 15,
                         ),
@@ -176,9 +181,10 @@ class _CreateGeneralDocumentScreenState extends State<CreateGeneralDocumentScree
                           controller: _contentController,
                           maxLines: null,
                           expands: true,
-                          style: const TextStyle(fontSize: 15),
+                          style: const TextStyle(fontSize: 15, color: Color(0xFF0F172A)),
                           decoration: const InputDecoration(
                             hintText: 'Start writing your document text...',
+                            hintStyle: TextStyle(color: Colors.grey),
                             border: InputBorder.none,
                           ),
                           onChanged: (_) => _saveSilently(),
@@ -206,24 +212,23 @@ class _CreateGeneralDocumentScreenState extends State<CreateGeneralDocumentScree
                 ),
                 onPressed: () async {
                   await _saveSilently();
+                  final currentDoc = _buildDoc();
                   if (context.mounted) {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (_) => ChoosePageScreen(
-                          currentPaper: _paperAsset,
-                          currentFont: _fontFamily,
-                          currentQuestionColor: _questionColor,
-                          currentAnswerColor: _answerColor,
-                          onApply: (paper, font, qCol, aCol) async {
+                          doc: currentDoc,
+                          onApply: (updated) async {
                             setState(() {
-                              _paperAsset = paper;
-                              _fontFamily = font;
-                              _questionColor = qCol;
-                              _answerColor = aCol;
+                              _paperAsset = updated.paperAsset;
+                              _fontFamily = updated.fontFamily;
+                              _questionColor = updated.questionColorValue;
+                              _answerColor = updated.answerColorValue;
+                              _hasMobileShadow = updated.hasMobileShadow;
                             });
-                            await _saveSilently();
-                            await PdfExportService.printOrSharePdf(_buildDoc());
+                            await LocalStorageService.saveDoc(updated);
+                            await PdfExportService.printOrSharePdf(updated);
                           },
                         ),
                       ),

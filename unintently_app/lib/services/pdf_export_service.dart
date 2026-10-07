@@ -27,10 +27,19 @@ class PdfExportService {
       paperImage = null;
     }
 
+    pw.MemoryImage? shadowImage;
+    if (doc.hasMobileShadow) {
+      try {
+        final ByteData data = await rootBundle.load('assets/images/PE.jpeg');
+        shadowImage = pw.MemoryImage(data.buffer.asUint8List());
+      } catch (_) {
+        shadowImage = null;
+      }
+    }
+
     final qColor = PdfColor.fromInt(doc.questionColorValue);
     final aColor = PdfColor.fromInt(doc.answerColorValue);
 
-    // Render pages
     pdf.addPage(
       pw.Page(
         pageFormat: PdfPageFormat.a4,
@@ -38,10 +47,22 @@ class PdfExportService {
         build: (pw.Context context) {
           return pw.Stack(
             children: [
+              // 1. Paper Background Texture
               if (paperImage != null)
                 pw.Positioned.fill(
-                  child: pw.Image(paperImage, fit: pw.BoxFit.cover),
+                  child: pw.Image(paperImage, fit: pw.BoxFit.fill),
                 ),
+
+              // 2. Mobile Shadow Effect (PE.jpeg)
+              if (shadowImage != null)
+                pw.Positioned.fill(
+                  child: pw.Opacity(
+                    opacity: 0.35,
+                    child: pw.Image(shadowImage, fit: pw.BoxFit.fill),
+                  ),
+                ),
+
+              // 3. Document Content
               pw.Padding(
                 padding: const pw.EdgeInsets.only(top: 55, left: 45, right: 35, bottom: 35),
                 child: pw.Column(
@@ -73,7 +94,7 @@ class PdfExportService {
                         ),
                       ),
                     ] else ...[
-                      // Q&A List
+                      // Dynamic Q&A list from user inputs
                       ...List.generate(doc.items.length, (idx) {
                         final item = doc.items[idx];
                         return pw.Padding(

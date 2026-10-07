@@ -24,19 +24,21 @@ class _CreateQAAssignmentScreenState extends State<CreateQAAssignmentScreen> {
   late String _fontFamily;
   late int _questionColor;
   late int _answerColor;
+  late bool _hasMobileShadow;
 
   @override
   void initState() {
     super.initState();
     final d = widget.initialDoc;
     _id = d?.id ?? DateTime.now().millisecondsSinceEpoch.toString();
-    _titleController = TextEditingController(text: d?.title ?? 'C and Python Lab');
-    _headingController = TextEditingController(text: d?.heading ?? 'MCSL-205');
+    _titleController = TextEditingController(text: d?.title ?? '');
+    _headingController = TextEditingController(text: d?.heading ?? '');
 
     _paperAsset = d?.paperAsset ?? 'assets/images/ruledAssignment.jpeg';
     _fontFamily = d?.fontFamily ?? 'intentlyR1';
     _questionColor = d?.questionColorValue ?? 0xFF0D47A1;
     _answerColor = d?.answerColorValue ?? 0xFF1A237E;
+    _hasMobileShadow = d?.hasMobileShadow ?? false;
 
     _qControllers = [];
     _aControllers = [];
@@ -47,19 +49,8 @@ class _CreateQAAssignmentScreenState extends State<CreateQAAssignmentScreen> {
         _aControllers.add(TextEditingController(text: item.answer));
       }
     } else {
-      // Default 3 questions as seen in screenshot
-      _addQA(
-        q: 'Using Structures write an interactive program in C language to create an application program for a small office to maintain the employee database.',
-        a: 'Program to Maintain Employee Database using Structures in C',
-      );
-      _addQA(
-        q: 'Attempt the following: Write Program to perform following tasks: Create a database schema and insert records.',
-        a: 'Program to Perform Database Operations using Python (MySQL)',
-      );
-      _addQA(
-        q: 'Write a python code to read a dataset (may be CSV file) and print all features i.e. columns.',
-        a: 'Program to Read CSV Dataset and Compute Descriptive Statistics',
-      );
+      // Start completely blank with 1 clean question & answer pair
+      _addQA();
     }
   }
 
@@ -82,10 +73,11 @@ class _CreateQAAssignmentScreenState extends State<CreateQAAssignmentScreen> {
   AssignmentDoc _buildDoc() {
     final List<QAItem> items = [];
     for (int i = 0; i < _qControllers.length; i++) {
-      items.add(QAItem(
-        question: _qControllers[i].text.trim(),
-        answer: _aControllers[i].text.trim(),
-      ));
+      final q = _qControllers[i].text.trim();
+      final a = _aControllers[i].text.trim();
+      if (q.isNotEmpty || a.isNotEmpty) {
+        items.add(QAItem(question: q, answer: a));
+      }
     }
     return AssignmentDoc(
       id: _id,
@@ -95,6 +87,7 @@ class _CreateQAAssignmentScreenState extends State<CreateQAAssignmentScreen> {
       items: items,
       fontFamily: _fontFamily,
       paperAsset: _paperAsset,
+      hasMobileShadow: _hasMobileShadow,
       questionColorValue: _questionColor,
       answerColorValue: _answerColor,
     );
@@ -132,7 +125,11 @@ class _CreateQAAssignmentScreenState extends State<CreateQAAssignmentScreen> {
         title: TextField(
           controller: _titleController,
           style: const TextStyle(color: Color(0xFF1E3A8A), fontWeight: FontWeight.bold, fontSize: 18),
-          decoration: const InputDecoration(border: InputBorder.none),
+          decoration: const InputDecoration(
+            hintText: 'Assignment Title...',
+            hintStyle: TextStyle(color: Colors.grey),
+            border: InputBorder.none,
+          ),
           onChanged: (_) => _saveSilently(),
         ),
         actions: [
@@ -147,7 +144,7 @@ class _CreateQAAssignmentScreenState extends State<CreateQAAssignmentScreen> {
               ),
               onPressed: () async {
                 await _saveSilently();
-                if (mounted) {
+                if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Assignment saved!'), duration: Duration(seconds: 1)),
                   );
@@ -169,7 +166,7 @@ class _CreateQAAssignmentScreenState extends State<CreateQAAssignmentScreen> {
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                    border: Border.all(color: const Color(0xFFCBD5E1)),
                   ),
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   child: Column(
@@ -201,9 +198,10 @@ class _CreateQAAssignmentScreenState extends State<CreateQAAssignmentScreen> {
                       TextField(
                         controller: _headingController,
                         textAlign: TextAlign.center,
-                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16, color: Color(0xFF1E293B)),
                         decoration: const InputDecoration(
-                          hintText: 'e.g. MCSL-205',
+                          hintText: 'e.g. MCSL-205 or Experiment 1',
+                          hintStyle: TextStyle(color: Colors.grey),
                           border: InputBorder.none,
                           isDense: true,
                         ),
@@ -222,7 +220,7 @@ class _CreateQAAssignmentScreenState extends State<CreateQAAssignmentScreen> {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                      border: Border.all(color: const Color(0xFFCBD5E1)),
                     ),
                     padding: const EdgeInsets.all(16),
                     child: Column(
@@ -235,7 +233,7 @@ class _CreateQAAssignmentScreenState extends State<CreateQAAssignmentScreen> {
                             Text(
                               'Question ${index + 1}.',
                               style: const TextStyle(
-                                color: Color(0xFF1D4ED8), // Blue Question
+                                color: Color(0xFF1D4ED8), // Deep Blue
                                 fontWeight: FontWeight.bold,
                                 fontSize: 15,
                               ),
@@ -252,22 +250,23 @@ class _CreateQAAssignmentScreenState extends State<CreateQAAssignmentScreen> {
                         TextField(
                           controller: _qControllers[index],
                           maxLines: null,
-                          style: const TextStyle(fontSize: 14),
+                          style: const TextStyle(fontSize: 15, color: Color(0xFF0F172A)),
                           decoration: const InputDecoration(
-                            hintText: 'Enter question here...',
+                            hintText: 'Enter question text...',
+                            hintStyle: TextStyle(color: Colors.grey),
                             border: InputBorder.none,
                             isDense: true,
                           ),
                           onChanged: (_) => _saveSilently(),
                         ),
 
-                        const Divider(height: 24),
+                        const Divider(height: 24, color: Color(0xFFE2E8F0)),
 
                         // Answer Header
                         Text(
                           'Answer ${index + 1}.',
                           style: const TextStyle(
-                            color: Color(0xFF10B981), // Green Answer
+                            color: Color(0xFF059669), // Emerald Green
                             fontWeight: FontWeight.bold,
                             fontSize: 15,
                           ),
@@ -276,9 +275,10 @@ class _CreateQAAssignmentScreenState extends State<CreateQAAssignmentScreen> {
                         TextField(
                           controller: _aControllers[index],
                           maxLines: null,
-                          style: const TextStyle(fontSize: 14),
+                          style: const TextStyle(fontSize: 15, color: Color(0xFF0F172A)),
                           decoration: const InputDecoration(
-                            hintText: 'Enter answer here...',
+                            hintText: 'Enter answer text...',
+                            hintStyle: TextStyle(color: Colors.grey),
                             border: InputBorder.none,
                             isDense: true,
                           ),
@@ -295,7 +295,7 @@ class _CreateQAAssignmentScreenState extends State<CreateQAAssignmentScreen> {
                     Expanded(
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF0D9488), // Teal Green
+                          backgroundColor: const Color(0xFF0D9488),
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                           padding: const EdgeInsets.symmetric(vertical: 12),
@@ -308,14 +308,14 @@ class _CreateQAAssignmentScreenState extends State<CreateQAAssignmentScreen> {
                     Expanded(
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF0D9488), // Teal Green
+                          backgroundColor: const Color(0xFF0D9488),
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                           padding: const EdgeInsets.symmetric(vertical: 12),
                         ),
                         onPressed: () {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Diagram insertion enabled')),
+                            const SnackBar(content: Text('Diagram support attached')),
                           );
                         },
                         child: const Text('Add Diagram', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -343,25 +343,23 @@ class _CreateQAAssignmentScreenState extends State<CreateQAAssignmentScreen> {
                 ),
                 onPressed: () async {
                   await _saveSilently();
+                  final currentDoc = _buildDoc();
                   if (context.mounted) {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (_) => ChoosePageScreen(
-                          currentPaper: _paperAsset,
-                          currentFont: _fontFamily,
-                          currentQuestionColor: _questionColor,
-                          currentAnswerColor: _answerColor,
-                          onApply: (paper, font, qCol, aCol) async {
+                          doc: currentDoc,
+                          onApply: (updated) async {
                             setState(() {
-                              _paperAsset = paper;
-                              _fontFamily = font;
-                              _questionColor = qCol;
-                              _answerColor = aCol;
+                              _paperAsset = updated.paperAsset;
+                              _fontFamily = updated.fontFamily;
+                              _questionColor = updated.questionColorValue;
+                              _answerColor = updated.answerColorValue;
+                              _hasMobileShadow = updated.hasMobileShadow;
                             });
-                            await _saveSilently();
-                            // Print / Export
-                            await PdfExportService.printOrSharePdf(_buildDoc());
+                            await LocalStorageService.saveDoc(updated);
+                            await PdfExportService.printOrSharePdf(updated);
                           },
                         ),
                       ),

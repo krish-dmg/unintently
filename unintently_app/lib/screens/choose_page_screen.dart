@@ -1,19 +1,14 @@
 import 'package:flutter/material.dart';
 import '../models/preset_options.dart';
+import '../models/assignment_doc.dart';
 
 class ChoosePageScreen extends StatefulWidget {
-  final String currentPaper;
-  final String currentFont;
-  final int currentQuestionColor;
-  final int currentAnswerColor;
-  final Function(String paper, String font, int qColor, int aColor) onApply;
+  final AssignmentDoc doc;
+  final Function(AssignmentDoc updatedDoc) onApply;
 
   const ChoosePageScreen({
     super.key,
-    required this.currentPaper,
-    required this.currentFont,
-    required this.currentQuestionColor,
-    required this.currentAnswerColor,
+    required this.doc,
     required this.onApply,
   });
 
@@ -26,27 +21,48 @@ class _ChoosePageScreenState extends State<ChoosePageScreen> {
   late String _selectedFont;
   late int _selectedQColor;
   late int _selectedAColor;
-  int _colorTab = 0; // 0 for Question, 1 for Answer
-
-  // 0: none, 1: Background, 2: Writing, 3: Pen Color, 4: Effects
-  int _activeSheet = 0;
+  late bool _hasMobileShadow;
+  int _colorTab = 0; // 0: Question, 1: Answer
+  int _activeSheet = 0; // 0: none, 1: Background, 2: Writing, 3: Pen Color, 4: Effects
 
   final List<Color> _inkPalette = [
-    const Color(0xFF0D47A1), // Deep Blue
-    const Color(0xFF4A148C), // Violet
-    const Color(0xFF2979FF), // Bright Blue
-    const Color(0xFF5C6BC0), // Indigo
-    const Color(0xFF000000), // Black
-    const Color(0xFF00C853), // Green
+    const Color(0xFF0D47A1), // Deep Navy Blue
+    const Color(0xFF4A148C), // Violet Ink
+    const Color(0xFF1E40AF), // Royal Blue
+    const Color(0xFF1E293B), // Dark Slate
+    const Color(0xFF000000), // Classic Black Ink
+    const Color(0xFF047857), // Forest Green
   ];
 
   @override
   void initState() {
     super.initState();
-    _selectedPaper = widget.currentPaper;
-    _selectedFont = widget.currentFont;
-    _selectedQColor = widget.currentQuestionColor;
-    _selectedAColor = widget.currentAnswerColor;
+    _selectedPaper = widget.doc.paperAsset;
+    _selectedFont = widget.doc.fontFamily;
+    _selectedQColor = widget.doc.questionColorValue;
+    _selectedAColor = widget.doc.answerColorValue;
+    _hasMobileShadow = widget.doc.hasMobileShadow;
+  }
+
+  AssignmentDoc _generateUpdatedDoc() {
+    return AssignmentDoc(
+      id: widget.doc.id,
+      title: widget.doc.title,
+      docType: widget.doc.docType,
+      heading: widget.doc.heading,
+      items: widget.doc.items,
+      generalContent: widget.doc.generalContent,
+      fontFamily: _selectedFont,
+      fontSize: widget.doc.fontSize,
+      lineSpacing: widget.doc.lineSpacing,
+      questionColorValue: _selectedQColor,
+      answerColorValue: _selectedAColor,
+      paperAsset: _selectedPaper,
+      hasMobileShadow: _hasMobileShadow,
+      isCompleted: widget.doc.isCompleted,
+      createdAt: widget.doc.createdAt,
+      updatedAt: DateTime.now(),
+    );
   }
 
   @override
@@ -71,11 +87,11 @@ class _ChoosePageScreenState extends State<ChoosePageScreen> {
       ),
       body: Column(
         children: [
-          // Live Page Preview
+          // Live Dynamic Preview Canvas (No Cutoff, AspectRatio 1 : 1.414)
           Expanded(
             child: Center(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: AspectRatio(
                   aspectRatio: 1 / 1.414,
                   child: Container(
@@ -84,51 +100,121 @@ class _ChoosePageScreenState extends State<ChoosePageScreen> {
                       borderRadius: BorderRadius.circular(4),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.08),
+                          color: Colors.black.withValues(alpha: 0.12),
                           blurRadius: 10,
                           offset: const Offset(0, 4),
                         ),
                       ],
-                      image: DecorationImage(
-                        image: AssetImage(_selectedPaper),
-                        fit: BoxFit.cover,
-                      ),
                     ),
-                    padding: const EdgeInsets.only(top: 45, left: 35, right: 25, bottom: 25),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Center(
-                          child: Text(
-                            'Intently Demo',
-                            style: TextStyle(
-                              fontFamily: _selectedFont,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Color(_selectedQColor),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: Stack(
+                        children: [
+                          // 1. Paper Background (Uncut, Fill Full Dimensions)
+                          Positioned.fill(
+                            child: Image.asset(
+                              _selectedPaper,
+                              fit: BoxFit.fill,
                             ),
                           ),
-                        ),
-                        const SizedBox(height: 10),
-                        Text(
-                          'What is this?',
-                          style: TextStyle(
-                            fontFamily: _selectedFont,
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: Color(_selectedQColor),
+
+                          // 2. Real Mobile Shadow Effect (PE.jpeg with multiply blend)
+                          if (_hasMobileShadow)
+                            Positioned.fill(
+                              child: Opacity(
+                                opacity: 0.45,
+                                child: Image.asset(
+                                  'assets/images/PE.jpeg',
+                                  fit: BoxFit.fill,
+                                ),
+                              ),
+                            ),
+
+                          // 3. User's Real Content
+                          Padding(
+                            padding: const EdgeInsets.only(top: 48, left: 38, right: 28, bottom: 28),
+                            child: SingleChildScrollView(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  if (widget.doc.heading.isNotEmpty) ...[
+                                    Center(
+                                      child: Text(
+                                        widget.doc.heading,
+                                        style: TextStyle(
+                                          fontFamily: _selectedFont,
+                                          fontSize: 17,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(_selectedQColor),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 10),
+                                  ],
+
+                                  if (widget.doc.docType == 'general') ...[
+                                    Text(
+                                      widget.doc.generalContent.isEmpty
+                                          ? 'Start writing your document text...'
+                                          : widget.doc.generalContent,
+                                      style: TextStyle(
+                                        fontFamily: _selectedFont,
+                                        fontSize: 14,
+                                        height: 1.5,
+                                        color: Color(_selectedAColor),
+                                      ),
+                                    ),
+                                  ] else ...[
+                                    if (widget.doc.items.isEmpty)
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(vertical: 20),
+                                        child: Text(
+                                          'No questions added yet. Go back to add questions.',
+                                          style: TextStyle(
+                                            fontFamily: _selectedFont,
+                                            fontSize: 14,
+                                            color: Color(_selectedAColor),
+                                          ),
+                                        ),
+                                      )
+                                    else
+                                      ...List.generate(widget.doc.items.length, (i) {
+                                        final item = widget.doc.items[i];
+                                        return Padding(
+                                          padding: const EdgeInsets.only(bottom: 10),
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                'Q${i + 1}. ${item.question}',
+                                                style: TextStyle(
+                                                  fontFamily: _selectedFont,
+                                                  fontSize: 13,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Color(_selectedQColor),
+                                                ),
+                                              ),
+                                              const SizedBox(height: 2),
+                                              Text(
+                                                'Ans. ${item.answer}',
+                                                style: TextStyle(
+                                                  fontFamily: _selectedFont,
+                                                  fontSize: 13,
+                                                  height: 1.4,
+                                                  color: Color(_selectedAColor),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                      }),
+                                  ],
+                                ],
+                              ),
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'This is demo preview page. You can customize background, handwriting style, and pen colors below.',
-                          style: TextStyle(
-                            fontFamily: _selectedFont,
-                            fontSize: 14,
-                            color: Color(_selectedAColor),
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -136,10 +222,10 @@ class _ChoosePageScreenState extends State<ChoosePageScreen> {
             ),
           ),
 
-          // Active Sheet Drawer / Selection Area
+          // Active Drawer / Customization Sheet
           if (_activeSheet > 0) _buildActiveSheet(),
 
-          // Bottom 4-Button Action Grid (Background, Writing, Pen Color, Effects)
+          // Bottom 4 Tab Buttons (Background, Writing, Pen Color, Effects)
           Container(
             color: Colors.white,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -200,12 +286,8 @@ class _ChoosePageScreenState extends State<ChoosePageScreen> {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     ),
                     onPressed: () {
-                      widget.onApply(
-                        _selectedPaper,
-                        _selectedFont,
-                        _selectedQColor,
-                        _selectedAColor,
-                      );
+                      final updated = _generateUpdatedDoc();
+                      widget.onApply(updated);
                       Navigator.pop(context);
                     },
                     child: const Text(
@@ -237,7 +319,7 @@ class _ChoosePageScreenState extends State<ChoosePageScreen> {
           color: isActive ? const Color(0xFFEEF2FF) : Colors.white,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: isActive ? const Color(0xFF2563EB) : const Color(0xFFE2E8F0),
+            color: isActive ? const Color(0xFF2563EB) : const Color(0xFFCBD5E1),
             width: 1.5,
           ),
         ),
@@ -264,7 +346,7 @@ class _ChoosePageScreenState extends State<ChoosePageScreen> {
     return Container(
       decoration: const BoxDecoration(
         color: Colors.white,
-        border: Border(top: BorderSide(color: Color(0xFFE2E8F0))),
+        border: Border(top: BorderSide(color: Color(0xFFCBD5E1))),
       ),
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -281,17 +363,17 @@ class _ChoosePageScreenState extends State<ChoosePageScreen> {
                         : _activeSheet == 3
                             ? 'Pen Color'
                             : 'Effects',
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF1E293B)),
               ),
               IconButton(
-                icon: const Icon(Icons.close, size: 20),
+                icon: const Icon(Icons.close, size: 20, color: Color(0xFF1E293B)),
                 onPressed: () => setState(() => _activeSheet = 0),
               ),
             ],
           ),
           const SizedBox(height: 10),
 
-          // Background Picker
+          // 1. Background Picker (Horizontal)
           if (_activeSheet == 1)
             SizedBox(
               height: 110,
@@ -317,7 +399,7 @@ class _ChoosePageScreenState extends State<ChoosePageScreen> {
                         borderRadius: BorderRadius.circular(4),
                         child: Stack(
                           children: [
-                            Image.asset(p.assetPath, fit: BoxFit.cover, width: 80, height: 110),
+                            Image.asset(p.assetPath, fit: BoxFit.fill, width: 80, height: 110),
                             if (isSelected)
                               const Positioned(
                                 top: 4,
@@ -333,7 +415,7 @@ class _ChoosePageScreenState extends State<ChoosePageScreen> {
               ),
             ),
 
-          // Writing Font Picker
+          // 2. Writing Font Picker (Horizontal)
           if (_activeSheet == 2)
             SizedBox(
               height: 70,
@@ -354,17 +436,29 @@ class _ChoosePageScreenState extends State<ChoosePageScreen> {
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
                           color: isSelected ? const Color(0xFF10B981) : const Color(0xFFCBD5E1),
-                          width: isSelected ? 2 : 1,
+                          width: isSelected ? 2.5 : 1,
                         ),
                       ),
                       alignment: Alignment.center,
-                      child: Text(
-                        'Demo Text',
-                        style: TextStyle(
-                          fontFamily: f.fontFamily,
-                          fontSize: 16,
-                          color: const Color(0xFF1E3A8A),
-                        ),
+                      child: Stack(
+                        children: [
+                          Center(
+                            child: Text(
+                              'Demo Text',
+                              style: TextStyle(
+                                fontFamily: f.fontFamily,
+                                fontSize: 16,
+                                color: const Color(0xFF1E3A8A),
+                              ),
+                            ),
+                          ),
+                          if (isSelected)
+                            const Positioned(
+                              top: 0,
+                              right: 0,
+                              child: Icon(Icons.check_circle, color: Color(0xFF10B981), size: 16),
+                            ),
+                        ],
                       ),
                     ),
                   );
@@ -372,7 +466,7 @@ class _ChoosePageScreenState extends State<ChoosePageScreen> {
               ),
             ),
 
-          // Pen Color Picker (Question vs Answer Tabs)
+          // 3. Pen Color Picker (Question vs Answer Tabs)
           if (_activeSheet == 3) ...[
             Row(
               children: [
@@ -385,7 +479,7 @@ class _ChoosePageScreenState extends State<ChoosePageScreen> {
                         border: Border(
                           bottom: BorderSide(
                             color: _colorTab == 0 ? const Color(0xFF2563EB) : Colors.transparent,
-                            width: 2,
+                            width: 2.5,
                           ),
                         ),
                       ),
@@ -393,7 +487,7 @@ class _ChoosePageScreenState extends State<ChoosePageScreen> {
                       child: Text(
                         'Question',
                         style: TextStyle(
-                          color: _colorTab == 0 ? const Color(0xFF2563EB) : Colors.grey,
+                          color: _colorTab == 0 ? const Color(0xFF2563EB) : Colors.grey.shade600,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -409,7 +503,7 @@ class _ChoosePageScreenState extends State<ChoosePageScreen> {
                         border: Border(
                           bottom: BorderSide(
                             color: _colorTab == 1 ? const Color(0xFF2563EB) : Colors.transparent,
-                            width: 2,
+                            width: 2.5,
                           ),
                         ),
                       ),
@@ -417,7 +511,7 @@ class _ChoosePageScreenState extends State<ChoosePageScreen> {
                       child: Text(
                         'Answer',
                         style: TextStyle(
-                          color: _colorTab == 1 ? const Color(0xFF2563EB) : Colors.grey,
+                          color: _colorTab == 1 ? const Color(0xFF2563EB) : Colors.grey.shade600,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -426,7 +520,7 @@ class _ChoosePageScreenState extends State<ChoosePageScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: _inkPalette.map((col) {
@@ -443,21 +537,22 @@ class _ChoosePageScreenState extends State<ChoosePageScreen> {
                     });
                   },
                   child: Container(
-                    width: 36,
-                    height: 36,
+                    width: 38,
+                    height: 38,
                     decoration: BoxDecoration(
                       color: col,
                       shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2),
                       boxShadow: [
                         BoxShadow(
-                          color: col.withOpacity(0.3),
-                          blurRadius: 6,
+                          color: Colors.black.withValues(alpha: 0.2),
+                          blurRadius: 4,
                           offset: const Offset(0, 2),
                         ),
                       ],
                     ),
                     child: isSelected
-                        ? const Icon(Icons.check, color: Colors.white, size: 20)
+                        ? const Icon(Icons.check, color: Colors.white, size: 22)
                         : null,
                   ),
                 );
@@ -465,19 +560,54 @@ class _ChoosePageScreenState extends State<ChoosePageScreen> {
             ),
           ],
 
-          // Effects Picker
+          // 4. Effects Picker (Mobile Shadow Toggle with Checkmark)
           if (_activeSheet == 4)
             Center(
-              child: Column(
-                children: [
-                  Image.asset('assets/images/PE.jpeg', width: 64, height: 64, errorBuilder: (ctx, err, stack) => const Icon(Icons.phone_android, size: 50)),
-                  const SizedBox(height: 6),
-                  const Text('Mobile Shadow', style: TextStyle(fontWeight: FontWeight.w600)),
-                ],
+              child: GestureDetector(
+                onTap: () {
+                  setState(() => _hasMobileShadow = !_hasMobileShadow);
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: _hasMobileShadow ? const Color(0xFF10B981) : const Color(0xFFCBD5E1),
+                      width: _hasMobileShadow ? 2.5 : 1,
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Image.asset(
+                            'assets/images/PH.jpg',
+                            width: 64,
+                            height: 72,
+                            fit: BoxFit.contain,
+                            errorBuilder: (ctx, err, stack) => const Icon(Icons.phone_android, size: 50, color: Colors.blue),
+                          ),
+                          if (_hasMobileShadow)
+                            const Icon(Icons.check_circle, color: Color(0xFF10B981), size: 28),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Mobile Shadow',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: _hasMobileShadow ? const Color(0xFF10B981) : const Color(0xFF1E293B),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
 
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           SizedBox(
             width: double.infinity,
             height: 44,
@@ -488,7 +618,7 @@ class _ChoosePageScreenState extends State<ChoosePageScreen> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               ),
               onPressed: () => setState(() => _activeSheet = 0),
-              child: const Text('Apply', style: TextStyle(fontWeight: FontWeight.bold)),
+              child: const Text('Apply', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
             ),
           ),
         ],

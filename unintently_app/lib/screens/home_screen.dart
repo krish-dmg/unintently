@@ -20,65 +20,20 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   bool _isLoading = true;
   String _searchQuery = '';
   int _currentBottomNavIndex = 0;
+  String _userName = 'Otzua';
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _tabController.addListener(() {
+      if (mounted) setState(() {});
+    });
     _loadDocs();
   }
 
   Future<void> _loadDocs() async {
     final list = await LocalStorageService.getDocs();
-    if (list.isEmpty) {
-      // Seed initial sample documents if first run
-      final sample1 = AssignmentDoc(
-        id: '1',
-        title: 'C and Python Lab',
-        docType: 'qa',
-        heading: 'MCSL-205',
-        items: [
-          QAItem(
-            question: 'Using Structures write an interactive program in C language to create an application program for a small office to maintain the employee database.',
-            answer: 'Program to Maintain Employee Database using Structures in C',
-          ),
-          QAItem(
-            question: 'Attempt the following: Write Program to perform following tasks: Create a database schema and insert records.',
-            answer: 'Program to Perform Database Operations using Python (MySQL)',
-          ),
-          QAItem(
-            question: 'Write a python code to read a dataset (may be CSV file) and print all features i.e. columns.',
-            answer: 'Program to Read CSV Dataset and Compute Descriptive Statistics',
-          ),
-        ],
-        paperAsset: 'assets/images/ruledAssignment.jpeg',
-      );
-      final sample2 = AssignmentDoc(
-        id: '2',
-        title: 'Windows and Linux Lab',
-        docType: 'qa',
-        heading: 'MCSL-206',
-        items: [
-          QAItem(question: 'Explain Linux file permissions in detail.', answer: 'File permissions in Linux are categorized into read, write, and execute for owner, group, and others.'),
-        ],
-        paperAsset: 'assets/images/ruled1.jpg',
-      );
-      final sample3 = AssignmentDoc(
-        id: '3',
-        title: 'Operating Systems Assignment',
-        docType: 'general',
-        heading: 'OS Concepts',
-        generalContent: 'Process synchronization and deadlock handling mechanisms in modern operating systems.',
-        paperAsset: 'assets/images/ruled2.jpg',
-      );
-      await LocalStorageService.saveDoc(sample1);
-      await LocalStorageService.saveDoc(sample2);
-      await LocalStorageService.saveDoc(sample3);
-      final refreshed = await LocalStorageService.getDocs();
-      if (mounted) setState(() { _docs = refreshed; _isLoading = false; });
-      return;
-    }
-
     if (mounted) {
       setState(() {
         _docs = list;
@@ -99,12 +54,39 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
     if (_searchQuery.trim().isEmpty) return currentTabDocs;
     final q = _searchQuery.toLowerCase();
-    return currentTabDocs.where((d) => d.title.toLowerCase().contains(q) || d.heading.toLowerCase().contains(q)).toList();
+    return currentTabDocs.where((d) =>
+        d.title.toLowerCase().contains(q) ||
+        d.heading.toLowerCase().contains(q)).toList();
+  }
+
+  void _confirmDeleteAll() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete All Assignments?'),
+        content: const Text('This will permanently delete all saved assignments from this device.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              for (var d in List.from(_docs)) {
+                await LocalStorageService.deleteDoc(d.id);
+              }
+              _loadDocs();
+            },
+            child: const Text('Delete All', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showCreateBottomSheet() {
     showModalBottomSheet(
       context: context,
+      backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -119,10 +101,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               children: [
                 const Text(
                   'Create',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.close),
+                  icon: const Icon(Icons.close, color: Color(0xFF1E293B)),
                   onPressed: () => Navigator.pop(ctx),
                 ),
               ],
@@ -137,10 +119,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   color: Colors.blue.shade50,
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.question_answer_outlined, color: Colors.blue),
+                child: const Icon(Icons.question_answer_outlined, color: Color(0xFF1D4ED8)),
               ),
-              title: const Text('Question & Answers', style: TextStyle(fontWeight: FontWeight.bold)),
-              subtitle: const Text('for structured Assignments', style: TextStyle(fontSize: 12)),
+              title: const Text('Question & Answers', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+              subtitle: const Text('for structured Assignments', style: TextStyle(fontSize: 12, color: Colors.grey)),
               onTap: () {
                 Navigator.pop(ctx);
                 Navigator.push(
@@ -160,8 +142,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 ),
                 child: const Icon(Icons.edit_note, color: Colors.orange),
               ),
-              title: const Text('General', style: TextStyle(fontWeight: FontWeight.bold)),
-              subtitle: const Text('for small documents', style: TextStyle(fontSize: 12)),
+              title: const Text('General', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+              subtitle: const Text('for small documents', style: TextStyle(fontSize: 12, color: Colors.grey)),
               onTap: () {
                 Navigator.pop(ctx);
                 Navigator.push(
@@ -171,33 +153,18 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               },
             ),
 
-            // Talk with other students
-            ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.green.shade50,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(Icons.forum_outlined, color: Colors.green),
-              ),
-              title: const Text('Talk with other students', style: TextStyle(fontWeight: FontWeight.bold)),
-              subtitle: const Text('for discussions, feature requests', style: TextStyle(fontSize: 12)),
-              onTap: () => Navigator.pop(ctx),
-            ),
-
             // ChatGPT to assignment tutorial / QR sync
             ListTile(
               leading: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.teal.shade50,
+                  color: const Color(0xFF10A37F).withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.qr_code_scanner, color: Colors.teal),
+                child: const Icon(Icons.qr_code_scanner, color: Color(0xFF10A37F)),
               ),
-              title: const Text('ChatGPT to assignment (QR Sync)', style: TextStyle(fontWeight: FontWeight.bold)),
-              subtitle: const Text('Sync directly with ChatGPT browser extension', style: TextStyle(fontSize: 12)),
+              title: const Text('ChatGPT to assignment (QR Sync)', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+              subtitle: const Text('Sync directly with ChatGPT browser extension', style: TextStyle(fontSize: 12, color: Colors.grey)),
               onTap: () {
                 Navigator.pop(ctx);
                 Navigator.push(
@@ -216,7 +183,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF1F5F9),
-      // Original Burger Drawer
+      // Left Burger Drawer
       drawer: Drawer(
         child: ListView(
           padding: EdgeInsets.zero,
@@ -243,33 +210,26 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               ),
             ),
             ListTile(
-              leading: const Icon(Icons.folder_copy_outlined),
+              leading: const Icon(Icons.folder_copy_outlined, color: Color(0xFF1E3A8A)),
               title: const Text('All Files'),
               onTap: () => Navigator.pop(context),
             ),
             ListTile(
-              leading: const Icon(Icons.qr_code_scanner),
+              leading: const Icon(Icons.qr_code_scanner, color: Color(0xFF1E3A8A)),
               title: const Text('ChatGPT Sync'),
               onTap: () {
                 Navigator.pop(context);
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const QrExtensionSyncScreen()));
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const QrExtensionSyncScreen())).then((_) => _loadDocs());
               },
             ),
             const Divider(),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Text('Community & Socials', style: TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold)),
-            ),
             ListTile(
-              leading: const Icon(Icons.code),
-              title: const Text('GitHub Source Code'),
-              subtitle: const Text('krish-dmg/unintently'),
-              onTap: () => Navigator.pop(context),
-            ),
-            ListTile(
-              leading: const Icon(Icons.share_outlined),
-              title: const Text('Share App with Friends'),
-              onTap: () => Navigator.pop(context),
+              leading: const Icon(Icons.delete_sweep_outlined, color: Colors.red),
+              title: const Text('Delete All Assignments', style: TextStyle(color: Colors.red)),
+              onTap: () {
+                Navigator.pop(context);
+                _confirmDeleteAll();
+              },
             ),
           ],
         ),
@@ -291,9 +251,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             fontSize: 20,
           ),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.delete_sweep_outlined, color: Colors.grey),
+            tooltip: 'Clear All',
+            onPressed: _docs.isEmpty ? null : _confirmDeleteAll,
+          ),
+        ],
       ),
-      body: _currentBottomNavIndex != 0
-          ? _buildProfileOrOtherTabs()
+      body: _currentBottomNavIndex == 1
+          ? _buildProfileTab()
           : Column(
               children: [
                 // Top Search Bar
@@ -301,9 +268,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   color: Colors.white,
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   child: TextField(
+                    style: const TextStyle(color: Color(0xFF0F172A), fontSize: 15),
                     decoration: InputDecoration(
                       hintText: 'Search for Assignments,Files...',
-                      hintStyle: const TextStyle(color: Colors.grey, fontSize: 14),
+                      hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
                       suffixIcon: const Icon(Icons.search, color: Color(0xFF1E3A8A)),
                       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       border: OutlineInputBorder(
@@ -330,13 +298,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     unselectedLabelColor: Colors.grey,
                     indicatorColor: const Color(0xFF1D4ED8),
                     indicatorWeight: 3,
-                    labelStyle: const TextStyle(fontWeight: FontWeight.bold),
+                    labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                     tabs: const [
                       Tab(text: 'All Files'),
                       Tab(text: 'Pending'),
                       Tab(text: 'Completed'),
                     ],
-                    onTap: (_) => setState(() {}),
                   ),
                 ),
 
@@ -347,10 +314,22 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   child: _isLoading
                       ? const Center(child: CircularProgressIndicator())
                       : _filteredDocs.isEmpty
-                          ? const Center(
-                              child: Text(
-                                'No assignments found',
-                                style: TextStyle(color: Colors.grey, fontSize: 16),
+                          ? Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.note_alt_outlined, size: 64, color: Colors.grey.shade300),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    'No assignments found',
+                                    style: TextStyle(color: Colors.grey.shade600, fontSize: 16, fontWeight: FontWeight.w600),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Tap the + button below to create one',
+                                    style: TextStyle(color: Colors.grey.shade400, fontSize: 13),
+                                  ),
+                                ],
                               ),
                             )
                           : ListView.builder(
@@ -374,12 +353,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                                     children: [
                                       Row(
                                         children: [
-                                          // Document Icon
                                           Container(
                                             width: 36,
                                             height: 36,
                                             decoration: BoxDecoration(
-                                              color: d.docType == 'qa' ? const Color(0xFF10A37F).withOpacity(0.15) : Colors.blue.withOpacity(0.15),
+                                              color: d.docType == 'qa'
+                                                  ? const Color(0xFF10A37F).withValues(alpha: 0.15)
+                                                  : Colors.blue.withValues(alpha: 0.15),
                                               borderRadius: BorderRadius.circular(8),
                                             ),
                                             child: Icon(
@@ -395,7 +375,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                                               children: [
                                                 Text(
                                                   d.title,
-                                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF0F172A)),
                                                 ),
                                                 Text(
                                                   d.docType == 'qa' ? 'Question & Answers' : 'General',
@@ -404,7 +384,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                                               ],
                                             ),
                                           ),
-                                          // Edit Icon
                                           IconButton(
                                             icon: const Icon(Icons.edit_outlined, size: 20, color: Color(0xFF1D4ED8)),
                                             onPressed: () {
@@ -426,7 +405,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                                       const SizedBox(height: 10),
                                       Row(
                                         children: [
-                                          // Time & Date badges
                                           Container(
                                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                             decoration: BoxDecoration(
@@ -451,6 +429,20 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                                             ),
                                           ),
                                           const Spacer(),
+                                          // Toggle completed checkbox
+                                          IconButton(
+                                            icon: Icon(
+                                              d.isCompleted ? Icons.check_circle : Icons.check_circle_outline,
+                                              color: d.isCompleted ? Colors.green : Colors.grey,
+                                              size: 20,
+                                            ),
+                                            tooltip: d.isCompleted ? 'Mark Pending' : 'Mark Completed',
+                                            onPressed: () async {
+                                              d.isCompleted = !d.isCompleted;
+                                              await LocalStorageService.saveDoc(d);
+                                              _loadDocs();
+                                            },
+                                          ),
                                           // Print PDF button
                                           IconButton(
                                             icon: const Icon(Icons.print_outlined, size: 20, color: Colors.grey),
@@ -475,7 +467,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               ],
             ),
 
-      // Bottom Navigation Bar
+      // Clean 2-Item Bottom Bar (Home & Profile)
       bottomNavigationBar: BottomAppBar(
         shape: const CircularNotchedRectangle(),
         notchMargin: 8,
@@ -483,11 +475,27 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            _buildBottomNavItem(icon: Icons.home, label: 'Home', index: 0),
-            _buildBottomNavItem(icon: Icons.chat_bubble_outline, label: 'Friends', index: 1),
-            const SizedBox(width: 48), // Floating Action Button spacer
-            _buildBottomNavItem(icon: Icons.workspace_premium_outlined, label: 'Premium', index: 2),
-            _buildBottomNavItem(icon: Icons.person_outline, label: 'Profile', index: 3),
+            InkWell(
+              onTap: () => setState(() => _currentBottomNavIndex = 0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.home, color: _currentBottomNavIndex == 0 ? const Color(0xFF1D4ED8) : Colors.grey, size: 24),
+                  Text('Home', style: TextStyle(color: _currentBottomNavIndex == 0 ? const Color(0xFF1D4ED8) : Colors.grey, fontSize: 11, fontWeight: FontWeight.bold)),
+                ],
+              ),
+            ),
+            const SizedBox(width: 48), // FAB center space
+            InkWell(
+              onTap: () => setState(() => _currentBottomNavIndex = 1),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.person_outline, color: _currentBottomNavIndex == 1 ? const Color(0xFF1D4ED8) : Colors.grey, size: 24),
+                  Text('Profile', style: TextStyle(color: _currentBottomNavIndex == 1 ? const Color(0xFF1D4ED8) : Colors.grey, fontSize: 11, fontWeight: FontWeight.bold)),
+                ],
+              ),
+            ),
           ],
         ),
       ),
@@ -502,155 +510,96 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     );
   }
 
-  Widget _buildBottomNavItem({required IconData icon, required String label, required int index}) {
-    final isSelected = _currentBottomNavIndex == index;
-    return InkWell(
-      onTap: () => setState(() => _currentBottomNavIndex = index),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, color: isSelected ? const Color(0xFF1D4ED8) : Colors.grey, size: 24),
-          Text(
-            label,
-            style: TextStyle(
-              color: isSelected ? const Color(0xFF1D4ED8) : Colors.grey,
-              fontSize: 11,
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildProfileOrOtherTabs() {
-    if (_currentBottomNavIndex == 3) {
-      // Profile Screen as in screenshot
-      return ListView(
-        children: [
-          Container(
-            color: const Color(0xFF1D4ED8),
-            height: 80,
-          ),
-          Transform.translate(
-            offset: const Offset(0, -40),
-            child: Column(
-              children: [
-                CircleAvatar(
-                  radius: 40,
-                  backgroundColor: Colors.white,
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(40),
-                    child: Image.asset(
-                      'assets/images/user.svg',
-                      width: 72,
-                      height: 72,
-                      errorBuilder: (ctx, err, stack) => const Icon(Icons.account_circle, size: 76, color: Colors.blue),
-                    ),
+  Widget _buildProfileTab() {
+    return ListView(
+      children: [
+        Container(
+          color: const Color(0xFF1D4ED8),
+          height: 80,
+        ),
+        Transform.translate(
+          offset: const Offset(0, -40),
+          child: Column(
+            children: [
+              CircleAvatar(
+                radius: 40,
+                backgroundColor: Colors.white,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(40),
+                  child: Image.asset(
+                    'assets/images/user.svg',
+                    width: 72,
+                    height: 72,
+                    errorBuilder: (ctx, err, stack) => const Icon(Icons.account_circle, size: 76, color: Colors.blue),
                   ),
                 ),
-                const SizedBox(height: 8),
-                const Text('Otzua', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                const Text('unintently-user', style: TextStyle(color: Colors.grey, fontSize: 13)),
-                const SizedBox(height: 16),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      _buildStatBox(label: 'REMAINING', value: '∞'),
-                      _buildStatBox(label: 'CREATED', value: '${_docs.length}'),
-                      _buildStatBox(label: 'SHARED', value: '0'),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Container(
-                  color: Colors.white,
-                  child: Column(
-                    children: [
-                      ListTile(
-                        leading: const Icon(Icons.sync),
-                        title: const Text('Sync data'),
-                        trailing: const Icon(Icons.chevron_right),
-                        onTap: () {},
-                      ),
-                      const Divider(height: 1),
-                      ListTile(
-                        leading: const Icon(Icons.settings_outlined),
-                        title: const Text('Assignment Settings'),
-                        trailing: const Icon(Icons.chevron_right),
-                        onTap: () {},
-                      ),
-                      const Divider(height: 1),
-                      ListTile(
-                        leading: const Icon(Icons.forum_outlined, color: Colors.green),
-                        title: const Text('Connect on WhatsApp'),
-                        trailing: const Icon(Icons.chevron_right),
-                        onTap: () {},
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      );
-    }
-
-    if (_currentBottomNavIndex == 1) {
-      // Friends / Referral as in screenshot
-      return Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Refer a friend', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 4),
-            const Text('And you both will get 5 Free Assignments.', style: TextStyle(color: Colors.grey)),
-            const SizedBox(height: 32),
-            _buildStepRow(step: '1', title: 'Invite your friends', desc: 'Just share your link'),
-            const SizedBox(height: 20),
-            _buildStepRow(step: '2', title: 'They hit the road', desc: 'With unlimited free Assignments'),
-            const SizedBox(height: 20),
-            _buildStepRow(step: '3', title: 'Open-Source for All', desc: 'Completely free for everyone'),
-            const Spacer(),
-            SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF059669),
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                ),
-                icon: const Icon(Icons.upload),
-                label: const Text('Refer friends now', style: TextStyle(fontWeight: FontWeight.bold)),
-                onPressed: () {},
               ),
-            ),
-          ],
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(_userName, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+                  IconButton(
+                    icon: const Icon(Icons.edit, size: 16, color: Colors.grey),
+                    onPressed: () {
+                      final ctrl = TextEditingController(text: _userName);
+                      showDialog(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          title: const Text('Edit Name'),
+                          content: TextField(controller: ctrl, decoration: const InputDecoration(labelText: 'Display Name')),
+                          actions: [
+                            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+                            ElevatedButton(
+                              onPressed: () {
+                                setState(() => _userName = ctrl.text.trim().isEmpty ? 'User' : ctrl.text.trim());
+                                Navigator.pop(ctx);
+                              },
+                              child: const Text('Save'),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+              const Text('unintently-offline', style: TextStyle(color: Colors.grey, fontSize: 13)),
+              const SizedBox(height: 16),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _buildStatBox(label: 'REMAINING', value: '∞'),
+                    _buildStatBox(label: 'CREATED', value: '${_docs.length}'),
+                    _buildStatBox(label: 'SHARED', value: '0'),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+              Container(
+                color: Colors.white,
+                child: Column(
+                  children: [
+                    ListTile(
+                      leading: const Icon(Icons.folder_outlined, color: Color(0xFF1E3A8A)),
+                      title: const Text('Total Assignments Saved', style: TextStyle(color: Color(0xFF0F172A))),
+                      trailing: Text('${_docs.length}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                    const Divider(height: 1),
+                    ListTile(
+                      leading: const Icon(Icons.delete_sweep_outlined, color: Colors.red),
+                      title: const Text('Delete All Saved Data', style: TextStyle(color: Colors.red)),
+                      onTap: _confirmDeleteAll,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
-      );
-    }
-
-    // Premium Tab
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.favorite, size: 64, color: Colors.redAccent),
-            const SizedBox(height: 16),
-            const Text('Everything is Free!', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            const Text('In Unintently v2, all fonts, paper styles, and pages are 100% unlocked forever.', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey)),
-          ],
-        ),
-      ),
+      ],
     );
   }
 
@@ -659,37 +608,17 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       width: 100,
       padding: const EdgeInsets.symmetric(vertical: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
       child: Column(
         children: [
-          Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+          Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
           const SizedBox(height: 4),
           Text(label, style: const TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.w600)),
         ],
       ),
-    );
-  }
-
-  Widget _buildStepRow({required String step, required String title, required String desc}) {
-    return Row(
-      children: [
-        CircleAvatar(
-          radius: 18,
-          backgroundColor: Colors.blue.shade50,
-          child: Text(step, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blue)),
-        ),
-        const SizedBox(width: 16),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-            Text(desc, style: const TextStyle(color: Colors.grey, fontSize: 13)),
-          ],
-        ),
-      ],
     );
   }
 }

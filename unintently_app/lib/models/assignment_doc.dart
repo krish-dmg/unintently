@@ -30,6 +30,7 @@ class AssignmentDoc {
   int questionColorValue;
   int answerColorValue;
   String paperAsset;
+  bool hasMobileShadow;
   bool isCompleted;
   DateTime createdAt;
   DateTime updatedAt;
@@ -44,9 +45,10 @@ class AssignmentDoc {
     this.fontFamily = 'intentlyR1',
     this.fontSize = 17.0,
     this.lineSpacing = 1.6,
-    this.questionColorValue = 0xFF0D47A1, // Blue
+    this.questionColorValue = 0xFF0D47A1, // Deep Blue
     this.answerColorValue = 0xFF1A237E,   // Navy / Ink
-    this.paperAsset = 'assets/images/ruled.jpg',
+    this.paperAsset = 'assets/images/ruledAssignment.jpeg',
+    this.hasMobileShadow = false,
     this.isCompleted = false,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -67,6 +69,7 @@ class AssignmentDoc {
     'questionColorValue': questionColorValue,
     'answerColorValue': answerColorValue,
     'paperAsset': paperAsset,
+    'hasMobileShadow': hasMobileShadow,
     'isCompleted': isCompleted,
     'createdAt': createdAt.toIso8601String(),
     'updatedAt': updatedAt.toIso8601String(),
@@ -87,7 +90,8 @@ class AssignmentDoc {
     lineSpacing: (map['lineSpacing'] as num?)?.toDouble() ?? 1.6,
     questionColorValue: map['questionColorValue'] ?? 0xFF0D47A1,
     answerColorValue: map['answerColorValue'] ?? 0xFF1A237E,
-    paperAsset: map['paperAsset'] ?? 'assets/images/ruled.jpg',
+    paperAsset: map['paperAsset'] ?? 'assets/images/ruledAssignment.jpeg',
+    hasMobileShadow: map['hasMobileShadow'] ?? false,
     isCompleted: map['isCompleted'] ?? false,
     createdAt: map['createdAt'] != null
         ? DateTime.tryParse(map['createdAt']) ?? DateTime.now()
