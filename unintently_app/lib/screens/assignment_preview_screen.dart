@@ -107,6 +107,15 @@ class _AssignmentPreviewScreenState extends State<AssignmentPreviewScreen> {
                     setState(() => _isProcessing = true);
                     try {
                       await PdfExportService.sharePdf(widget.doc);
+                    } catch (e) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Failed to share PDF: $e'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
                     } finally {
                       if (mounted) setState(() => _isProcessing = false);
                     }
@@ -123,6 +132,15 @@ class _AssignmentPreviewScreenState extends State<AssignmentPreviewScreen> {
                     setState(() => _isProcessing = true);
                     try {
                       await PdfExportService.printPdf(widget.doc);
+                    } catch (e) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Failed to print document: $e'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
                     } finally {
                       if (mounted) setState(() => _isProcessing = false);
                     }

@@ -8,6 +8,52 @@ import '../models/assignment_doc.dart';
 import 'layout_engine.dart';
 
 class PdfExportService {
+  /// Sanitizes text strings to safe Latin-1 representation for PDF TTF glyph encoding
+  static String sanitizeForPdf(String input) {
+    if (input.isEmpty) return '';
+
+    String s = input
+        .replaceAll('’', "'")
+        .replaceAll('‘', "'")
+        .replaceAll('“', '"')
+        .replaceAll('”', '"')
+        .replaceAll('„', '"')
+        .replaceAll('‚', "'")
+        .replaceAll('′', "'")
+        .replaceAll('″', '"')
+        .replaceAll('—', ' - ')
+        .replaceAll('–', '-')
+        .replaceAll('−', '-')
+        .replaceAll('…', '...')
+        .replaceAll('•', '*')
+        .replaceAll('‣', '*')
+        .replaceAll('⁃', '-')
+        .replaceAll('◦', '*')
+        .replaceAll('\u00A0', ' ')
+        .replaceAll('\u200B', '')
+        .replaceAll('\u200C', '')
+        .replaceAll('\u200D', '')
+        .replaceAll('\uFEFF', '');
+
+    final buffer = StringBuffer();
+    for (final char in s.runes) {
+      if (char <= 255) {
+        buffer.writeCharCode(char);
+      } else {
+        if (char == 0x2018 || char == 0x2019) {
+          buffer.write("'");
+        } else if (char == 0x201C || char == 0x201D) {
+          buffer.write('"');
+        } else if (char == 0x2013 || char == 0x2014) {
+          buffer.write('-');
+        }
+        // Drop emoji and unsupported high-unicode glyphs to avoid pdf latin1 encoding errors
+      }
+    }
+
+    return buffer.toString();
+  }
+
   static Future<Uint8List> generatePdf(AssignmentDoc doc) async {
     final pdf = pw.Document();
 
@@ -98,7 +144,7 @@ class PdfExportService {
                     right: rightMargin,
                     child: pw.Center(
                       child: pw.Text(
-                        doc.heading,
+                        sanitizeForPdf(doc.heading),
                         style: pw.TextStyle(
                           font: handwritingFont,
                           fontSize: (fontSize * 0.95).clamp(15.0, 22.0),
@@ -120,10 +166,13 @@ class PdfExportService {
                   final double topPos = baselineY - (fontSize * fontCal.ascentRatio);
                   final PdfColor inkColor = lineItem.isQuestion ? qColor : aColor;
 
+                  final safeMarginLabel = sanitizeForPdf(lineItem.marginLabel);
+                  final safeText = sanitizeForPdf(lineItem.text);
+
                   return pw.Stack(
                     children: [
                       // Margin label: Q.1 or Ans. placed to the left of the margin line
-                      if (lineItem.marginLabel.isNotEmpty)
+                      if (safeMarginLabel.isNotEmpty)
                         pw.Positioned(
                           top: topPos,
                           left: 4.0,
@@ -131,7 +180,7 @@ class PdfExportService {
                           child: pw.Align(
                             alignment: pw.Alignment.centerRight,
                             child: pw.Text(
-                              lineItem.marginLabel,
+                              safeMarginLabel,
                               maxLines: 1,
                               style: pw.TextStyle(
                                 font: handwritingFont,
@@ -144,13 +193,13 @@ class PdfExportService {
                         ),
 
                       // Body text placed to the right of the vertical margin line
-                      if (lineItem.text.isNotEmpty)
+                      if (safeText.isNotEmpty)
                         pw.Positioned(
                           top: topPos,
                           left: bodyLeft,
                           right: rightMargin,
                           child: pw.Text(
-                            lineItem.text,
+                            safeText,
                             maxLines: 1,
                             style: pw.TextStyle(
                               font: handwritingFont,
@@ -183,7 +232,7 @@ class PdfExportService {
     final bytes = await generatePdf(doc);
     final String cleanTitle = doc.title.trim().isEmpty
         ? 'Assignment_${DateTime.now().millisecondsSinceEpoch}'
-        : doc.title.replaceAll(RegExp(r'[\\/:*?"<>|\s]+'), '_');
+        : sanitizeForPdf(doc.title).replaceAll(RegExp(r'[\\/:*?"<>|\s]+'), '_');
 
     String? savedPath;
 
@@ -228,8 +277,8 @@ class PdfExportService {
   static Future<void> sharePdf(AssignmentDoc doc) async {
     final bytes = await generatePdf(doc);
     final String cleanTitle = doc.title.trim().isEmpty
-        ? 'Assignment'
-        : doc.title.replaceAll(RegExp(r'[\\/:*?"<>|\s]+'), '_');
+        ? 'Assignment_${DateTime.now().millisecondsSinceEpoch}'
+        : sanitizeForPdf(doc.title).replaceAll(RegExp(r'[\\/:*?"<>|\s]+'), '_');
     await Printing.sharePdf(bytes: bytes, filename: '$cleanTitle.pdf');
   }
 
@@ -237,8 +286,8 @@ class PdfExportService {
   static Future<void> printPdf(AssignmentDoc doc) async {
     final bytes = await generatePdf(doc);
     final String cleanTitle = doc.title.trim().isEmpty
-        ? 'Assignment'
-        : doc.title.replaceAll(RegExp(r'[\\/:*?"<>|\s]+'), '_');
+        ? 'Assignment_${DateTime.now().millisecondsSinceEpoch}'
+        : sanitizeForPdf(doc.title).replaceAll(RegExp(r'[\\/:*?"<>|\s]+'), '_');
     await Printing.layoutPdf(
       onLayout: (PdfPageFormat format) async => bytes,
       name: '$cleanTitle.pdf',
