@@ -328,7 +328,7 @@
     const jsonString = JSON.stringify(data.assignmentDoc, null, 2);
     const shareUrl = data.isCloudSynced
       ? `http://localhost:8787/assignments/${data.syncCode}`
-      : `https://intently.page.link/${data.syncCode}`;
+      : `https://unintently.page.link/${data.syncCode}`;
 
     // For QR code: if cloud synced, encode the sync link; otherwise encode self-contained payload URL
     const qrData = data.isCloudSynced
@@ -341,7 +341,7 @@
           ${ICONS.close}
         </button>
 
-        <div class="unintently-modal-brand-title">Intently</div>
+        <div class="unintently-modal-brand-title">Unintently</div>
         <div class="unintently-modal-heading">Scan QR</div>
         <div class="unintently-modal-subtitle">Scan this on mobile to open assignment</div>
 

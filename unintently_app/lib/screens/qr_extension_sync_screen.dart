@@ -20,7 +20,6 @@ class _QrExtensionSyncScreenState extends State<QrExtensionSyncScreen>
 
   bool _isProcessing = false;
   bool _isTorchOn = false;
-  bool _showManualInput = false;
 
   late AnimationController _laserAnimController;
   late Animation<double> _laserAnimation;
@@ -287,7 +286,7 @@ class _QrExtensionSyncScreenState extends State<QrExtensionSyncScreen>
                           backgroundColor: const Color(0xFF0057D2),
                           foregroundColor: Colors.white,
                         ),
-                        onPressed: () => setState(() => _showManualInput = true),
+                        onPressed: _openManualPasteSheet,
                         child: const Text('Enter Code / Paste Manually'),
                       ),
                     ],
@@ -307,7 +306,7 @@ class _QrExtensionSyncScreenState extends State<QrExtensionSyncScreen>
                   // Corner Borders
                   Container(
                     decoration: BoxDecoration(
-                      border: Border.all(color: Colors.white.withOpacity(0.3), width: 1.5),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 1.5),
                       borderRadius: BorderRadius.circular(16),
                     ),
                   ),
@@ -392,7 +391,7 @@ class _QrExtensionSyncScreenState extends State<QrExtensionSyncScreen>
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: const Color(0xFF0057D2).withOpacity(0.8),
+                                color: const Color(0xFF0057D2).withValues(alpha: 0.8),
                                 blurRadius: 6,
                                 spreadRadius: 2,
                               ),
@@ -415,7 +414,7 @@ class _QrExtensionSyncScreenState extends State<QrExtensionSyncScreen>
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.65),
+                color: Colors.black.withValues(alpha: 0.65),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: Colors.white12),
               ),
@@ -465,7 +464,7 @@ class _QrExtensionSyncScreenState extends State<QrExtensionSyncScreen>
                   height: 48,
                   child: ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white.withOpacity(0.2),
+                      backgroundColor: Colors.white.withValues(alpha: 0.2),
                       foregroundColor: Colors.white,
                       elevation: 0,
                       shape: RoundedRectangleBorder(

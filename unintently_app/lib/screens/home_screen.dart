@@ -245,7 +245,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           ),
         ),
         title: const Text(
-          'Intently',
+          'Unintently',
           style: TextStyle(
             color: Color(0xFF1E3A8A),
             fontWeight: FontWeight.bold,

@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Unintently: ChatGPT to Assignment",
+  "name": "Unintently",
   "short_name": "Unintently",
   "version": "2.0.0",
   "description": "Convert ChatGPT conversations into realistic handwritten assignments for Unintently v2.",
