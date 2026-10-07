@@ -33,6 +33,5 @@ build/
 
 # Large APK decompiled binaries / cache
 *.apk
-apktool_extracted/original/
-apktool_extracted/smali/
+apktool_extracted/
 extracted_apk/
