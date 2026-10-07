@@ -1,0 +1,360 @@
+/**
+ * Unintently Chrome Extension - Content Script Styles
+ * Version: 2.0.0
+ */
+
+/* Injected Trigger Button */
+.unintently-trigger-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background-color: #0057d2;
+  color: #ffffff !important;
+  border: 1px solid #0045a8;
+  border-radius: 9999px;
+  padding: 6px 14px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+  z-index: 100;
+  margin-left: 8px;
+  line-height: 1.2;
+}
+
+.unintently-trigger-btn:hover {
+  background-color: #0044a5;
+  box-shadow: 0 2px 6px rgba(0, 87, 210, 0.35);
+  transform: translateY(-1px);
+}
+
+.unintently-trigger-btn:active {
+  background-color: #003684;
+  transform: translateY(0);
+}
+
+.unintently-trigger-btn.converting {
+  opacity: 0.85;
+  cursor: wait;
+}
+
+.unintently-trigger-btn svg {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+
+/* Floating Fallback Button if composer toolbar isn't attached */
+.unintently-floating-btn {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 9999;
+  background-color: #0057d2;
+  color: #ffffff;
+  border: none;
+  border-radius: 9999px;
+  padding: 10px 18px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0, 87, 210, 0.4);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.unintently-floating-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0, 87, 210, 0.55);
+}
+
+/* Modal Overlay */
+.unintently-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999999;
+  padding: 16px;
+  animation: unintentlyFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes unintentlyFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes unintentlyScaleUp {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* Modal Container */
+.unintently-modal {
+  background-color: #ffffff;
+  color: #1e293b;
+  width: 100%;
+  max-width: 480px;
+  border-radius: 16px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: unintentlyScaleUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* Modal Header */
+.unintently-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.unintently-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.unintently-brand-icon {
+  width: 28px;
+  height: 28px;
+  background: #0057d2;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+}
+
+.unintently-brand-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.unintently-brand-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.unintently-brand-version {
+  font-size: 11px;
+  font-weight: 700;
+  color: #0057d2;
+  background: #eff6ff;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.unintently-close-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #64748b;
+  border-radius: 8px;
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.unintently-close-btn:hover {
+  background-color: #f1f5f9;
+  color: #0f172a;
+}
+
+.unintently-close-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* Modal Body */
+.unintently-modal-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.unintently-doc-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0 0 8px 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.unintently-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.unintently-badge {
+  font-size: 12px;
+  font-weight: 600;
+  background-color: #f0fdf4;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+  border-radius: 9999px;
+  padding: 3px 10px;
+}
+
+.unintently-badge-secondary {
+  font-size: 12px;
+  font-weight: 500;
+  background-color: #f8fafc;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+  border-radius: 9999px;
+  padding: 3px 10px;
+}
+
+/* QR Card Wrapper */
+.unintently-qr-card {
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+  min-width: 220px;
+  min-height: 220px;
+}
+
+.unintently-qr-card canvas {
+  display: block;
+  border-radius: 4px;
+}
+
+/* Sync Code Box */
+.unintently-code-box {
+  width: 100%;
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.unintently-code-input {
+  flex: 1;
+  background-color: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: #334155;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  outline: none;
+}
+
+.unintently-copy-small-btn {
+  background-color: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+
+.unintently-copy-small-btn:hover {
+  background-color: #e2e8f0;
+  color: #0f172a;
+}
+
+/* Action Buttons */
+.unintently-actions {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.unintently-btn-primary {
+  width: 100%;
+  background-color: #0057d2;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 2px rgba(0, 87, 210, 0.2);
+}
+
+.unintently-btn-primary:hover {
+  background-color: #0044a5;
+  box-shadow: 0 2px 6px rgba(0, 87, 210, 0.35);
+}
+
+.unintently-btn-primary svg {
+  width: 18px;
+  height: 18px;
+}
+
+.unintently-btn-success {
+  background-color: #16a34a !important;
+}
+
+/* Instructions */
+.unintently-instructions {
+  margin-top: 14px;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px 14px;
+  width: 100%;
+  text-align: left;
+}
+
+.unintently-instructions-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 4px;
+}
+
+.unintently-instructions-text {
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.4;
+  margin: 0;
+}
