@@ -22,15 +22,57 @@
 
 ---
 
+## Origin & Philosophy: Why Unintently Exists
+
+Unintently is an independent, completely free, and open-source recreation of the original Intently (I-N-T-E-N-T-L-Y) handwriting project.
+
+The original application offered helpful handwriting capabilities, but gated critical features behind paywalls, subscription models, coins, and artificial usage restrictions. When attempts were made to contribute code, feature enhancements, and fixes directly to the original Intently project, the original project owner declined external contributions.
+
+Rather than accepting paywalls and artificial restrictions for students needing to prepare assignments and lecture notes, Unintently was created. The application was reverse-engineered from the ground up, rebuilt with modern Flutter architecture, and liberated from:
+- All paywalls, subscriptions, and artificial coin systems
+- All intrusive advertisements and promotional banners
+- All tracking, third-party analytics, and user surveillance
+- All mandatory logins, emails, and cloud account barriers
+
+Every feature in Unintently is fully unlocked, open-source, local-first, and free forever.
+
+---
+
 ## Highlights & Features
 
 - **100% Free & Open-Source:** No paywalls, subscriptions, coins, or feature gates. Everything is unlocked.
 - **Privacy-First & Local-First:** No accounts, no email logins, and no tracking. All documents live safely on your device.
+- **ChatGPT Companion Extension:** Convert any ChatGPT conversation into a handwritten assignment in seconds via QR scan or instant link.
 - **12 Handcrafted Handwriting Fonts:** From natural student cursive to clean exam script and informal gel-pen notes.
 - **Authentic Paper Backgrounds:** High-resolution ruled notebook pages, assignment registers, college ruled sheets, and blank A4 styles.
 - **Built-in AI Assistant:** Powered by free, serverless **Cloudflare Workers AI** running open-weight Meta Llama 3 models.
 - **Print-Ready PDF Generation:** Export standard A4 vector PDFs ready for printing or classroom submission.
 - **Zero Notifications:** No push marketing, tracking daemons, or unsolicited alerts.
+
+---
+
+## ChatGPT Chrome Extension
+
+The Unintently browser extension connects desktop AI workflows directly to your mobile handwritten notes.
+
+### Capabilities
+- **Dual-Layer Extraction Engine**: Directly queries the official ChatGPT Session API (`/backend-api/conversation/:id`) with automatic fallback to high-fidelity DOM parsing. Fully immune to DOM virtualization, dynamic layout changes, and missing turns.
+- **Strict Q&A Separation**: User prompts are automatically organized as questions, and assistant replies are populated as answers, ready for ruled page rendering.
+- **Instant QR Code & Deep Link**: Generates a high-contrast QR code and Cloudflare Worker sync link that opens straight into the Unintently editor on your phone.
+- **On-Screen Preview**: Verify your extracted questions and answers in real-time before scanning.
+
+### Extension Installation
+1. Download `unintently-chatgpt-extension-v2.3.0.zip` from the [Releases](https://github.com/krish-dmg/unintently/releases) section and extract it (or use the `browser extention/1.2_0` directory from this repository).
+2. Open your Chromium browser (Google Chrome, Brave, Edge, Arc) and go to `chrome://extensions`.
+3. Enable **Developer mode** using the toggle in the upper right corner.
+4. Click **Load unpacked** and select the unzipped `1.2_0` directory.
+
+### How to Use the Extension
+1. Open any dialogue on [ChatGPT](https://chatgpt.com).
+2. Click the **Convert To Assignment** button in the composer bar.
+3. Review your extracted questions and answers in the dialog preview.
+4. In the Unintently mobile app, open the drawer menu, select **Scan ChatGPT Assignment QR**, and scan the QR code.
+5. The assignment will load instantly with your selected handwriting font and ruled paper background, ready for preview and PDF export.
 
 ---
 
