@@ -123,20 +123,87 @@ class AssignmentDoc {
     return result;
   }
 
+  /// Automatically unpacks interleaved dialogue turns or Q&A blocks if content was received merged into a single item
+  static List<QAItem> _unpackIfCombinedQa(List<QAItem> items, String textFallback) {
+    if (items.length > 1) return items;
+
+    String contentToInspect = '';
+    if (items.length == 1) {
+      final single = items.first;
+      contentToInspect = single.answer.trim();
+    } else if (items.isEmpty && textFallback.trim().isNotEmpty) {
+      contentToInspect = textFallback.trim();
+    }
+
+    if (contentToInspect.isEmpty) return items;
+
+    final hasQMarkers = RegExp(r'(?:^|\n)(?:Q(?:\.|uestion)?\s*\d*|User|Human|You)\s*[\:\.]', caseSensitive: false).hasMatch(contentToInspect);
+    final hasAMarkers = RegExp(r'(?:^|\n)(?:A(?:ns(?:wer)?)?\s*\d*|ChatGPT|Assistant|GPT)\s*[\:\.]', caseSensitive: false).hasMatch(contentToInspect);
+
+    if (hasQMarkers && hasAMarkers) {
+      final List<QAItem> unpacked = [];
+      String currentQ = '';
+      String currentA = '';
+      bool inAnswer = false;
+
+      final lines = contentToInspect.split('\n');
+      for (final line in lines) {
+        final trimmed = line.trim();
+        final isQStart = RegExp(r'^(?:Q(?:\.|uestion)?\s*\d*|User|Human|You)\s*[\:\.]\s*', caseSensitive: false).hasMatch(trimmed);
+        final isAStart = RegExp(r'^(?:A(?:ns(?:wer)?)?\s*\d*|ChatGPT|Assistant|GPT)\s*[\:\.]\s*', caseSensitive: false).hasMatch(trimmed);
+
+        if (isQStart) {
+          if (currentQ.isNotEmpty || currentA.isNotEmpty) {
+            unpacked.add(QAItem(question: currentQ.trim(), answer: currentA.trim()));
+            currentQ = '';
+            currentA = '';
+          }
+          currentQ = trimmed.replaceFirst(RegExp(r'^(?:Q(?:\.|uestion)?\s*\d*|User|Human|You)\s*[\:\.]\s*', caseSensitive: false), '');
+          inAnswer = false;
+        } else if (isAStart) {
+          currentA = trimmed.replaceFirst(RegExp(r'^(?:A(?:ns(?:wer)?)?\s*\d*|ChatGPT|Assistant|GPT)\s*[\:\.]\s*', caseSensitive: false), '');
+          inAnswer = true;
+        } else {
+          if (inAnswer) {
+            currentA = currentA.isEmpty ? trimmed : '$currentA\n$trimmed';
+          } else {
+            currentQ = currentQ.isEmpty ? trimmed : '$currentQ\n$trimmed';
+          }
+        }
+      }
+
+      if (currentQ.isNotEmpty || currentA.isNotEmpty) {
+        unpacked.add(QAItem(question: currentQ.trim(), answer: currentA.trim()));
+      }
+
+      if (unpacked.length > 1) {
+        return unpacked;
+      }
+    }
+
+    return items;
+  }
+
   factory AssignmentDoc.fromMap(Map<String, dynamic> rawMap) {
     final Map<String, dynamic> map = (rawMap['assignment'] is Map)
         ? Map<String, dynamic>.from(rawMap['assignment'] as Map)
         : rawMap;
 
+    final docTitle = map['title'] ?? 'Untitled Assignment';
+    final docHeading = map['heading'] ?? (map['title'] ?? '');
+    final genContent = map['generalContent'] ?? '';
+    final rawItems = _parseItems(map['items']);
+    final parsedItems = _unpackIfCombinedQa(rawItems, genContent);
+
     return AssignmentDoc(
       id: (map['id'] != null && map['id'].toString().isNotEmpty)
           ? map['id'].toString()
           : DateTime.now().millisecondsSinceEpoch.toString(),
-      title: map['title'] ?? 'Untitled Assignment',
+      title: docTitle,
       docType: map['docType'] ?? 'qa',
-      heading: map['heading'] ?? (map['title'] ?? ''),
-      items: _parseItems(map['items']),
-      generalContent: map['generalContent'] ?? '',
+      heading: docHeading,
+      items: parsedItems,
+      generalContent: genContent,
       fontFamily: map['fontFamily'] ?? 'intentlyR1',
       fontSize: (map['fontSize'] as num?)?.toDouble() ?? 17.0,
       lineSpacing: (map['lineSpacing'] as num?)?.toDouble() ?? 1.6,

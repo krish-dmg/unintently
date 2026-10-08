@@ -209,7 +209,15 @@ class _QrExtensionSyncScreenState extends State<QrExtensionSyncScreen>
       if (doc.generalContent.trim().isEmpty && doc.items.isNotEmpty) {
         doc.generalContent = doc.items.map((i) => 'Q: ${i.question}\n\nA: ${i.answer}').join('\n\n');
       } else if (doc.items.isEmpty && doc.generalContent.trim().isNotEmpty) {
-        doc.items = [QAItem(question: doc.heading.isNotEmpty ? doc.heading : doc.title, answer: doc.generalContent)];
+        final unpacked = AssignmentDoc.fromMap({
+          'title': doc.title,
+          'heading': doc.heading,
+          'generalContent': doc.generalContent,
+          'items': <dynamic>[],
+        }).items;
+        doc.items = unpacked.isNotEmpty
+            ? unpacked
+            : [QAItem(question: doc.heading.isNotEmpty ? doc.heading : doc.title, answer: doc.generalContent)];
       }
 
       await LocalStorageService.saveDoc(doc);

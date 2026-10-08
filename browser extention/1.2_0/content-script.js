@@ -95,84 +95,231 @@
   }
 
   /**
-   * Extract conversation turns reliably using the authentic APK parser logic with modern fallbacks
+   * Identifies all distinct conversation turns in ChatGPT across DOM revisions
+   */
+  function getTurnContainers() {
+    const selectors = [
+      'article',
+      '[data-testid^="conversation-turn-"]',
+      'div.group\\/conversation-turn',
+      'div[class*="conversation-turn"]',
+      '[data-message-author-role]'
+    ];
+
+    let allMatches = [];
+    selectors.forEach(sel => {
+      try {
+        const found = Array.from(document.querySelectorAll(sel));
+        allMatches.push(...found);
+      } catch (_) {}
+    });
+
+    if (allMatches.length === 0) return [];
+
+    // Filter to retain only unique, topmost turn containers
+    const topTurns = [];
+    allMatches.forEach(el => {
+      const isContained = topTurns.some(t => t.contains(el));
+      if (!isContained) {
+        for (let i = topTurns.length - 1; i >= 0; i--) {
+          if (el.contains(topTurns[i])) {
+            topTurns.splice(i, 1);
+          }
+        }
+        topTurns.push(el);
+      }
+    });
+
+    // Sort strictly in document reading order
+    topTurns.sort((a, b) => {
+      const pos = a.compareDocumentPosition(b);
+      if (pos & Node.DOCUMENT_POSITION_FOLLOWING) return -1;
+      if (pos & Node.DOCUMENT_POSITION_PRECEDING) return 1;
+      return 0;
+    });
+
+    return topTurns;
+  }
+
+  /**
+   * Accurately determines if a turn is from the user or assistant
+   */
+  function detectTurnRole(el) {
+    if (!el) return "unknown";
+
+    // 1. Explicit author role attribute
+    const roleAttr = el.getAttribute("data-message-author-role") ||
+                     el.querySelector("[data-message-author-role]")?.getAttribute("data-message-author-role");
+    if (roleAttr === "user") return "user";
+    if (roleAttr === "assistant") return "assistant";
+
+    // 2. Screen-reader / accessibility headings (standard in modern ChatGPT)
+    const headings = Array.from(el.querySelectorAll('h5, h6, [class*="sr-only"], span, div'));
+    for (const h of headings) {
+      const text = (h.textContent || "").trim().toLowerCase();
+      if (text.startsWith("you said") || text === "you" || text === "you:") return "user";
+      if (text.startsWith("chatgpt said") || text === "chatgpt" || text === "chatgpt:") return "assistant";
+    }
+
+    // 3. Assistant formatting markers (markdown/prose containers are exclusively used for ChatGPT outputs)
+    if (el.querySelector(".markdown, [class*='markdown'], [class*='prose']")) {
+      return "assistant";
+    }
+
+    // 4. User message attributes and bubble classes
+    if (
+      el.querySelector('[data-testid*="user"]') ||
+      el.getAttribute("data-testid")?.includes("user") ||
+      el.classList.contains("user-message") ||
+      el.querySelector('[class*="bg-token-message-surface"]')
+    ) {
+      return "user";
+    }
+
+    // 5. Assistant action controls (Copy, Regenerate, Read aloud)
+    if (el.querySelector('button[aria-label*="Copy"], [data-testid*="copy"], button[aria-label*="Read aloud"]')) {
+      return "assistant";
+    }
+
+    return "unknown";
+  }
+
+  /**
+   * Extracts clean message text from a turn element
+   */
+  function extractTurnText(el, role) {
+    if (!el) return "";
+    const clone = el.cloneNode(true);
+
+    // Remove screen-reader headers
+    clone.querySelectorAll('h5, h6, [class*="sr-only"]').forEach(h => {
+      const t = (h.textContent || "").toLowerCase();
+      if (t.includes("you said") || t.includes("chatgpt said")) h.remove();
+    });
+
+    // Remove action buttons and toolbar widgets
+    clone.querySelectorAll('button, svg, [role="button"], [class*="action-button"], footer').forEach(b => b.remove());
+
+    if (role === "user") {
+      const userBubble = clone.querySelector(".whitespace-pre-wrap, div[class*='whitespace-pre-wrap']");
+      if (userBubble && userBubble.innerText?.trim()) {
+        return userBubble.innerText.trim();
+      }
+    } else if (role === "assistant") {
+      const md = clone.querySelector(".markdown, [class*='markdown'], [class*='prose']");
+      if (md && md.innerText?.trim()) {
+        return md.innerText.trim();
+      }
+    }
+
+    return cleanElementText(clone);
+  }
+
+  /**
+   * Extract conversation turns reliably using multi-layer detection and sequential pairing
    */
   function extractConversation() {
     const title = extractConversationTitle();
+    const items = [];
 
-    // 1. Primary selector from original extension:
-    let userElements = Array.from(document.querySelectorAll('[data-message-author-role="user"]'));
-    let assistantElements = Array.from(document.querySelectorAll('[data-message-author-role="assistant"]'));
+    // Approach 1: Top-level turn container parsing
+    const turns = getTurnContainers();
+    if (turns.length > 0) {
+      let currentQuestion = "";
+      let currentAnswer = "";
+      let lastRole = null;
 
-    // 2. Modern ChatGPT fallback: article tags
-    if (userElements.length === 0 && assistantElements.length === 0) {
-      const articles = Array.from(document.querySelectorAll("main article, article"));
-      articles.forEach((art) => {
-        const isUser =
-          art.querySelector('[data-message-author-role="user"]') ||
-          art.getAttribute("data-testid")?.includes("user") ||
-          art.classList.contains("user-message");
+      turns.forEach(turn => {
+        let role = detectTurnRole(turn);
+        if (role === "unknown") {
+          role = (lastRole === "user") ? "assistant" : "user";
+        }
 
-        const isAssistant =
-          art.querySelector('[data-message-author-role="assistant"]') ||
-          art.querySelector(".markdown") ||
-          art.getAttribute("data-testid")?.includes("assistant");
+        const text = extractTurnText(turn, role);
+        if (!text) return;
 
-        if (isUser) {
-          userElements.push(art);
-        } else if (isAssistant) {
-          assistantElements.push(art);
+        if (role === "user") {
+          if (currentQuestion && currentAnswer) {
+            items.push({
+              questionNumber: items.length + 1,
+              question: currentQuestion,
+              answer: currentAnswer
+            });
+            currentQuestion = text;
+            currentAnswer = "";
+          } else if (currentQuestion && !currentAnswer) {
+            currentQuestion += "\n\n" + text;
+          } else {
+            currentQuestion = text;
+          }
+          lastRole = "user";
+        } else if (role === "assistant") {
+          if (currentAnswer) {
+            currentAnswer += "\n\n" + text;
+          } else {
+            currentAnswer = text;
+          }
+          lastRole = "assistant";
         }
       });
-    }
 
-    // 3. Fallback: if only markdown exists, gather all markdown nodes
-    if (userElements.length === 0 && assistantElements.length === 0) {
-      const markdowns = Array.from(document.querySelectorAll("main .markdown, .markdown"));
-      markdowns.forEach((m) => assistantElements.push(m));
-    }
-
-    // Build items using the exact logic from the original extension
-    const items = [];
-    const maxLen = Math.max(userElements.length, assistantElements.length);
-
-    for (let i = 0; i < maxLen; i++) {
-      let uEl = userElements[i];
-      let aEl = assistantElements[i];
-
-      let userText = cleanElementText(uEl);
-      let assistantText = "";
-      if (aEl) {
-        let md = aEl.querySelector(".markdown") || aEl;
-        assistantText = cleanElementText(md);
-      }
-
-      // If both are empty, skip
-      if (!userText && !assistantText) continue;
-
-      if (!userText) {
-        userText = maxLen === 1 ? title : `Note ${i + 1}`;
-      }
-      if (!assistantText) {
-        assistantText = "";
-      }
-
-      items.push({
-        questionNumber: i + 1,
-        question: userText,
-        answer: assistantText
-      });
-    }
-
-    // Fallback 4: If still empty, check any chat bubbles in main
-    if (items.length === 0) {
-      const bubbles = Array.from(document.querySelectorAll("main div.whitespace-pre-wrap, main p"));
-      const textPieces = bubbles.map(b => cleanElementText(b)).filter(t => t.length > 0);
-      if (textPieces.length > 0) {
+      if (currentQuestion || currentAnswer) {
         items.push({
-          questionNumber: 1,
-          question: title,
-          answer: textPieces.join("\n\n")
+          questionNumber: items.length + 1,
+          question: currentQuestion || title,
+          answer: currentAnswer || ""
+        });
+      }
+    }
+
+    // Approach 2: If turn containers failed, query user and assistant elements directly
+    if (items.length === 0) {
+      const userElements = Array.from(document.querySelectorAll('[data-message-author-role="user"]'));
+      const assistantElements = Array.from(document.querySelectorAll('[data-message-author-role="assistant"], .markdown'));
+      const maxLen = Math.max(userElements.length, assistantElements.length);
+
+      for (let i = 0; i < maxLen; i++) {
+        const uText = cleanElementText(userElements[i]);
+        let aText = "";
+        if (assistantElements[i]) {
+          const md = assistantElements[i].querySelector(".markdown") || assistantElements[i];
+          aText = cleanElementText(md);
+        }
+
+        if (!uText && !aText) continue;
+
+        items.push({
+          questionNumber: items.length + 1,
+          question: uText || `Question ${items.length + 1}`,
+          answer: aText || ""
+        });
+      }
+    }
+
+    // Approach 3: Fallback bubble pairing (ensures messages are NEVER all joined into a single answer)
+    if (items.length === 0) {
+      const bubbles = Array.from(document.querySelectorAll("main .markdown, main div.whitespace-pre-wrap, main article, main p"));
+      const topBubbles = bubbles.filter((el, idx) => {
+        return !bubbles.some((other, oIdx) => idx !== oIdx && other.contains(el));
+      });
+      topBubbles.sort((a, b) => {
+        const pos = a.compareDocumentPosition(b);
+        if (pos & Node.DOCUMENT_POSITION_FOLLOWING) return -1;
+        if (pos & Node.DOCUMENT_POSITION_PRECEDING) return 1;
+        return 0;
+      });
+
+      const pieces = topBubbles
+        .map(b => cleanElementText(b))
+        .filter(t => t.length > 0 && !t.match(/^(Copy|Edit|Read aloud|Regenerate|Good response|Bad response)$/i));
+
+      for (let i = 0; i < pieces.length; i += 2) {
+        const q = pieces[i];
+        const a = pieces[i + 1] || "";
+        items.push({
+          questionNumber: items.length + 1,
+          question: q,
+          answer: a
         });
       }
     }
